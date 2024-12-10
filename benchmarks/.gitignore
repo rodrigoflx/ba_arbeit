@@ -5,3 +5,6 @@
 /ez_setup.py
 /*.egg-info
 /.venv
+*.so
+*.o
+runner_executable

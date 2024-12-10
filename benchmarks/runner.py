@@ -13,12 +13,19 @@ from ctypes import c_long, c_double, c_char_p, Structure
 class Buckets(Structure):
     _fields_ = [("arr", c_long * 100), ("sum", c_long)]
 
-runner_lib = ctypes.CDLL('./rji/librunner.so')
-runner_lib.sample_into_buckets_wrapper.argtypes = [c_long, c_long, c_double]
-runner_lib.sample_into_buckets_wrapper.restype = Buckets
+rji_runner_lib = ctypes.CDLL('./rji/librunner.so')
+rji_runner_lib.sample_into_buckets_wrapper.argtypes = [c_long, c_long, c_double]
+rji_runner_lib.sample_into_buckets_wrapper.restype = Buckets
 
-runner_lib.buckets_to_csv_wrapper.argtypes = [c_long, Buckets, c_char_p]
-runner_lib.buckets_to_csv_wrapper.restype = None
+rji_runner_lib.buckets_to_csv_wrapper.argtypes = [c_long, Buckets, c_char_p]
+rji_runner_lib.buckets_to_csv_wrapper.restype = None
+
+lean_runner_lib = ctypes.CDLL('./lean_store/librunner.so')
+lean_runner_lib.sample_into_buckets_wrapper.argtypes = [c_long, c_long, c_double]
+lean_runner_lib.sample_into_buckets_wrapper.restype = Buckets
+
+lean_runner_lib.buckets_to_csv_wrapper.argtypes = [c_long, Buckets, c_char_p]
+lean_runner_lib.buckets_to_csv_wrapper.restype = None
 
 
 @click.command()
@@ -87,10 +94,15 @@ def run_benchmark(generator, skew, n, samples):
                 print(f"Error running gen-zipf: {e.stderr}")
                 raise
         case "rji":
-            buckets = runner_lib.sample_into_buckets_wrapper(n, samples, skew)    
+            buckets = rji_runner_lib.sample_into_buckets_wrapper(n, samples, skew)    
             now = datetime.now()
             timestamp = now.strftime('%Y-%m-%d-%H-%M')
-            runner_lib.buckets_to_csv_wrapper(n, buckets, ctypes.c_char_p(f"results_rji_{timestamp}.csv".encode("utf-8")))
+            rji_runner_lib.buckets_to_csv_wrapper(n, buckets, ctypes.c_char_p(f"results_rji_{timestamp}.csv".encode("utf-8")))
+        case "lean":
+            buckets = lean_runner_lib.sample_into_buckets_wrapper(n, samples, skew)
+            now = datetime.now()
+            timestamp = now.strftime('%Y-%m-%d-%H-%M')
+            lean_runner_lib.buckets_to_csv_wrapper(n, buckets, ctypes.c_char_p(f"results_lean_{timestamp}.csv".encode("utf-8"))) 
         case _:
             click.echo(f"Unsupported generator {generator}. Make sure you tipped it in correctly!")
 
