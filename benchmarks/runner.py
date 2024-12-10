@@ -29,7 +29,7 @@ lean_runner_lib.buckets_to_csv_wrapper.restype = None
 
 
 @click.command()
-@click.option('--generator', default='fio', help='Benchmark to use. The following are supported: "ycsb", "fio", "apache"')
+@click.option('--generator', default='fio', help='Benchmark to use. The following are supported: "ycsb", "fio", "apache","rji", "lean"')
 @click.option('--skew', default=1.0,  help='Skew factor of the Zipfian Distribution')
 @click.option('--n', default=1, help='Range of items to sample from in the Zipfian in multiples of million (1.000.000)')
 @click.option('--samples', default=1, help='Number of samples that should be taken from the distribution in multiples of million (1.000.000)')
@@ -104,7 +104,7 @@ def run_benchmark(generator, skew, n, samples):
             timestamp = now.strftime('%Y-%m-%d-%H-%M')
             lean_runner_lib.buckets_to_csv_wrapper(n, buckets, ctypes.c_char_p(f"results_lean_{timestamp}.csv".encode("utf-8"))) 
         case _:
-            click.echo(f"Unsupported generator {generator}. Make sure you tipped it in correctly!")
+            click.echo(f"Unsupported generator {generator}. Supported generators are: 'ycsb', 'fio', 'apache', 'rji', 'lean'")
 
 @click.command()
 @click.option('--skew', default=1,  help='Skew factor of the Zipfian Distribution')
