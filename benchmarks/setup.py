@@ -11,7 +11,8 @@ setup(
         'console_scripts': [
             'run_benchmark = runner:run_benchmark',
             'run_all_benchmarks = runner:run_all_benchmarks',
-            'graph_result = runner:graph_result'
+            'graph_result = runner:graph_result',
+            'graph_results_pairwise = runner:graph_results_pairwise',
         ],
     },
 )

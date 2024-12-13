@@ -116,18 +116,53 @@ def run_all_benchmarks(skew, n):
     click.echo("This program is not implemented")        
 
 
-@click.command() 
-@click.argument('filename')
-def graph_result(filename):
-    """Utility to plot graphs using an R script and output the results to a file with the following format: vis_generator_date.png. Expects a csv file named FILENAME"""
+@click.command()
+@click.argument('filenames', nargs=-1)  # Accept one or more filenames
+def graph_result(filenames):
+    """
+    Utility to plot graphs using an R script and output the results to files with the format:
+    vis_generator_date.png. Expects one or more CSV files named FILENAMES.
+    """
+    if not filenames:
+        print("Error: Please provide at least one CSV file.")
+        return
+
     r_script_path = os.path.join(os.path.dirname(__file__), 'plot.r')
+
     try:
+        # Call the R script with all provided filenames
         result = subprocess.run(
-            ['Rscript', r_script_path, filename],
+            ['Rscript', r_script_path] + list(filenames),
             capture_output=True,
             text=True,
             check=True
         )
+        print(result.stdout)
     except subprocess.CalledProcessError as e:
         print(f"Error running the R script for generating the graph: {e.stderr}")
-        
+
+@click.command()
+@click.argument("base", type=click.Path(exists=True))
+@click.argument("to_be_compared", nargs=-1, type=click.Path(exists=True))
+def graph_results_pairwise(base, to_be_compared):
+    """
+    Utility to plot graphs using an R script and output the results to files with the format:
+    vis_generator_date.png. Expects one or more CSV files named FILENAMES.
+    """
+    if not to_be_compared:
+        print("Error: Please provide at least one CSV file.")
+        return
+
+    r_script_path = os.path.join(os.path.dirname(__file__), 'plot_pairwise.r')
+
+    try:
+        # Call the R script with all provided filenames
+        result = subprocess.run(
+            ['Rscript', r_script_path, base] + list(to_be_compared),
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        print(result.stdout)
+    except subprocess.CalledProcessError as e:
+        print(f"Error running the R script for generating the graph: {e.stderr}")
