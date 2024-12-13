@@ -58,10 +58,10 @@ plot_pairwise <- function(reference_file, comparison_files) {
         facet_wrap(~ pair, scales = "free_y") +
         theme(legend.position = "none")
 
-    output_file <- "pairwise_graphs.pdf"
-
     widthInline <- 8
     heightInline <- 6
+
+    output_file <- file.path("graphs", paste0("comparison_", ref_generator, "_vs_", comp_generator, ".pdf"))
     CairoPDF(output_file, width = widthInline, height = heightInline, bg = "transparent")
     print(zipfdist)
     dev.off()

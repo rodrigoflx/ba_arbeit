@@ -48,7 +48,8 @@ def run_benchmark(generator, skew, n, samples):
                     ['java', '-jar', jar_path, str(n), str(samples), str(skew)],
                     capture_output=True,
                     text=True,
-                    check=True
+                    check=True,
+                    cwd='csv'
                 )
             except subprocess.CalledProcessError as e:
                 print(f"Error running YCSB-Runner: {e.stderr}")
@@ -59,7 +60,8 @@ def run_benchmark(generator, skew, n, samples):
                     ['java', '-jar', jar_path, str(n), str(samples), str(skew)],
                     capture_output=True,
                     text=True,
-                    check=True
+                    check=True,
+                    cwd='csv'
                 )
             except subprocess.CalledProcessError as e:
                 print(f"Error running ApacheCommonRunner: {e.stderr}")
@@ -78,14 +80,14 @@ def run_benchmark(generator, skew, n, samples):
 
             try:
                 result = subprocess.run(
-                    gen_zipf_cmd, capture_output=True, text=True, check=True
+                    gen_zipf_cmd, capture_output=True, text=True, check=True, cwd='csv'
                 )
 
                 reader = csv.reader(io.StringIO(result.stdout))
                 now = datetime.now()
                 timestamp = now.strftime('%Y-%m-%d-%H-%M')
 
-                with open(f"results_fio_{timestamp}.csv", 'w', newline='') as csvfile:
+                with open(f"csv/results_fio_{timestamp}.csv", 'w', newline='') as csvfile:
                     writer = csv.writer(csvfile)
                     for row in reader:
                         writer.writerow(row)
@@ -97,12 +99,12 @@ def run_benchmark(generator, skew, n, samples):
             buckets = rji_runner_lib.sample_into_buckets_wrapper(n, samples, skew)    
             now = datetime.now()
             timestamp = now.strftime('%Y-%m-%d-%H-%M')
-            rji_runner_lib.buckets_to_csv_wrapper(n, buckets, ctypes.c_char_p(f"results_rji_{timestamp}.csv".encode("utf-8")))
+            rji_runner_lib.buckets_to_csv_wrapper(n, buckets, ctypes.c_char_p(f"csv/results_rji_{timestamp}.csv".encode("utf-8")))
         case "lean":
             buckets = lean_runner_lib.sample_into_buckets_wrapper(n, samples, skew)
             now = datetime.now()
             timestamp = now.strftime('%Y-%m-%d-%H-%M')
-            lean_runner_lib.buckets_to_csv_wrapper(n, buckets, ctypes.c_char_p(f"results_lean_{timestamp}.csv".encode("utf-8"))) 
+            lean_runner_lib.buckets_to_csv_wrapper(n, buckets, ctypes.c_char_p(f"csv/results_lean_{timestamp}.csv".encode("utf-8"))) 
         case _:
             click.echo(f"Unsupported generator {generator}. Supported generators are: 'ycsb', 'fio', 'apache', 'rji', 'lean'")
 
@@ -135,7 +137,7 @@ def graph_result(filenames):
             ['Rscript', r_script_path] + list(filenames),
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
         print(result.stdout)
     except subprocess.CalledProcessError as e:
@@ -161,7 +163,7 @@ def graph_results_pairwise(base, to_be_compared):
             ['Rscript', r_script_path, base] + list(to_be_compared),
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
         print(result.stdout)
     except subprocess.CalledProcessError as e:

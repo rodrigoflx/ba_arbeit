@@ -36,7 +36,7 @@ plot_distributions <- function(file_paths) {
         facet_wrap(~ generator, scales = "free_y") +
         theme(legend.position = "none")
 
-    output_file <- "faceted_graphs.pdf"
+    output_file <- file.path("graphs", "faceted_graphs.pdf")
 
     widthInline <- 8
     heightInline <- 6
