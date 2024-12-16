@@ -68,9 +68,10 @@ def run_benchmark(generator, skew, n, samples):
         case "fio":
             block_size = 4096
             total_space_gib = (n * block_size) / (1024**3)
+            fio_path = os.path.join(os.path.dirname(__file__), "fio", "fio-genzipf")
 
             gen_zipf_cmd = [
-                "./fio/fio-genzipf",  
+                fio_path,
                 "-t", "zipf",
                 "-i", str(skew),
                 "-g", str(total_space_gib),
