@@ -12,7 +12,7 @@ buckets sample_into_buckets(long n, long samples, double alpha) {
     RejectionInversionZipfSampler rji_sampler(n, alpha);
     std::random_device rd;
     std::mt19937_64 rng(rd());
-    long bucket_size = samples / 100;
+    long bucket_size = n / 100;
 
 
     for (long i = 0; i < samples; i++) {

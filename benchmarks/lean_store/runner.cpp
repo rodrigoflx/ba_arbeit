@@ -2,7 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
-
+#include <algorithm>
 
 buckets sample_into_buckets(long n, long samples, double alpha) {
     buckets bucket_;
@@ -11,12 +11,13 @@ buckets sample_into_buckets(long n, long samples, double alpha) {
     bucket_.sum = samples;
 
     leanstore::utils::ZipfGenerator zipf_gen(n, 1.0 - (1.0/alpha));
-    long bucket_size = samples / 100;
+    unsigned long bucket_size = n / 100;
 
 
     for (long i = 0; i < samples; i++) {
         uint64_t sample = zipf_gen.rand();
-        bucket_.arr[sample / bucket_size]++;
+        uint64_t index = std::min(sample / bucket_size, 99UL);
+        bucket_.arr[index]++;
     }
 
     return bucket_; 
