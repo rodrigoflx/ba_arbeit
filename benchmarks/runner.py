@@ -33,7 +33,8 @@ lean_runner_lib.buckets_to_csv_wrapper.restype = None
 @click.option('--skew', default=1.0,  help='Skew factor of the Zipfian Distribution')
 @click.option('--n', default=1, help='Range of items to sample from in the Zipfian in multiples of million (1.000.000)')
 @click.option('--samples', default=1, help='Number of samples that should be taken from the distribution in multiples of million (1.000.000)')
-def run_benchmark(generator, skew, n, samples):
+@click.option('--bucketize', default=False, help='If set, the program will output results in 100 buckets, otherwise each rank will be returned')
+def run_benchmark(generator, skew, n, samples, bucketize):
     """Program to run specified 'generator' option with the given Zipfian 'skew' factor using the item range in 'n'. This program outputs a CSV file with 
     the following filename format: 'results_generator_date.csv' and following column structure 'bucket_num, cnt, rel_freq'."""
 
@@ -45,7 +46,7 @@ def run_benchmark(generator, skew, n, samples):
             jar_path = os.path.join(os.path.dirname(__file__), 'ycsb', 'YCSB-Runner.jar')
             try:
                 result = subprocess.run(
-                    ['java', '-jar', jar_path, str(n), str(samples), str(skew)],
+                    ['java', '-jar', jar_path, str(n), str(samples), str(skew), str(bucketize)],
                     capture_output=True,
                     text=True,
                     check=True,
@@ -57,7 +58,7 @@ def run_benchmark(generator, skew, n, samples):
             jar_path = os.path.join(os.path.dirname(__file__), 'apache', 'ApacheCommonRunner.jar')
             try:
                 result = subprocess.run(
-                    ['java', '-jar', jar_path, str(n), str(samples), str(skew)],
+                    ['java', '-jar', jar_path, str(n), str(samples), str(skew), str(bucketize)],
                     capture_output=True,
                     text=True,
                     check=True,
@@ -70,14 +71,23 @@ def run_benchmark(generator, skew, n, samples):
             total_space_gib = (n * block_size) / (1024**3)
             fio_path = os.path.join(os.path.dirname(__file__), "fio", "fio-genzipf")
 
-            gen_zipf_cmd = [
-                fio_path,
-                "-t", "zipf",
-                "-i", str(skew),
-                "-g", str(total_space_gib),
-                "-b", str(block_size),
-                "-c"
-            ]
+            if bucketize:
+                gen_zipf_cmd = [
+                    fio_path,
+                    "-t", "zipf",
+                    "-i", str(skew),
+                    "-g", str(total_space_gib),
+                    "-b", str(block_size),
+                ]
+            else:
+                gen_zipf_cmd = [
+                    fio_path,
+                    "-t", "zipf",
+                    "-i", str(skew),
+                    "-g", str(total_space_gib),
+                    "-b", str(block_size),
+                    "c"
+                ]
 
             try:
                 result = subprocess.run(
@@ -97,15 +107,21 @@ def run_benchmark(generator, skew, n, samples):
                 print(f"Error running gen-zipf: {e.stderr}")
                 raise
         case "rji":
-            buckets = rji_runner_lib.sample_into_buckets_wrapper(n, samples, skew)    
-            now = datetime.now()
-            timestamp = now.strftime('%Y-%m-%d-%H-%M')
-            rji_runner_lib.buckets_to_csv_wrapper(n, buckets, ctypes.c_char_p(f"csv/results_rji_{timestamp}.csv".encode("utf-8")))
+            if bucketize:
+                buckets = rji_runner_lib.sample_into_buckets_wrapper(n, samples, skew)
+                now = datetime.now()
+                timestamp = now.strftime('%Y-%m-%d-%H-%M')
+                rji_runner_lib.buckets_to_csv_wrapper(n, buckets, ctypes.c_char_p(f"csv/results_rji_{timestamp}.csv".encode("utf-8")))
+            else:
+                rji_runnner_lib.sample_raw(n,samples,skew)  
         case "lean":
-            buckets = lean_runner_lib.sample_into_buckets_wrapper(n, samples, skew)
-            now = datetime.now()
-            timestamp = now.strftime('%Y-%m-%d-%H-%M')
-            lean_runner_lib.buckets_to_csv_wrapper(n, buckets, ctypes.c_char_p(f"csv/results_lean_{timestamp}.csv".encode("utf-8"))) 
+            if bucketize:
+                buckets = lean_runner_lib.sample_into_buckets_wrapper(n, samples, skew)
+                now = datetime.now()
+                timestamp = now.strftime('%Y-%m-%d-%H-%M')
+                lean_runner_lib.buckets_to_csv_wrapper(n, buckets, ctypes.c_char_p(f"csv/results_lean_{timestamp}.csv".encode("utf-8"))) 
+            else:
+                rji_runner_lib.sample_raw(n,samples,skew)
         case _:
             click.echo(f"Unsupported generator {generator}. Supported generators are: 'ycsb', 'fio', 'apache', 'rji', 'lean'")
 
