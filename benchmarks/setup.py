@@ -6,13 +6,18 @@ setup(
     py_modules=['runner'],
     install_requires=[
         'Click',
+        "matplotlib",
+        "pandas",
+        "JPype1",
+        "sortedcontainers",
     ],
     entry_points={
         'console_scripts': [
-            'run_benchmark = runner:run_benchmark',
-            'run_all_benchmarks = runner:run_all_benchmarks',
-            'graph_result = runner:graph_result',
-            'graph_results_pairwise = runner:graph_results_pairwise',
+            'sample_zipf = CLI:sample_zipf',
+            'run_all_benchmarks = CLI:run_all_benchmarks',
+            'perf_benchmark = CLI:perf_benchmark',
+            'graph_result = CLI:graph_result',
+            'graph_results_pairwise = CLI:graph_results_pairwise',
         ],
     },
 )
