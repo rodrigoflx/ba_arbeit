@@ -10,3 +10,5 @@ thesis/LMT_Thesis.log
 thesis/LMT_Thesis.pdf
 benchmarks/graphs/
 benchmarks/results/
+
+impl/libsampler.so
