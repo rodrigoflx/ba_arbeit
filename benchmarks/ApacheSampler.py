@@ -6,7 +6,7 @@ from sortedcontainers import SortedDict
 from Sampler import Sampler
 
 
-class ApacheCommonRunner(Sampler):
+class ApacheSampler(Sampler):
     """
     "ApacheCommon"'s RJI sampler wrapper
     """

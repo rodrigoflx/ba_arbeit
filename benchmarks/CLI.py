@@ -10,13 +10,15 @@ from DictStorageInterface import GzipJSONStorage, DuckDBStorage, CSVStorage
 from PostProcessingInterface import RawOutputPostProcessor, BucketingPostProcessor
 
 from YCSBSampler import YCSBSampler
-from ApacheSampler import ApacheCommonRunner
+from ApacheSampler import ApacheSampler
 from FIOSampler import FIOSampler
 from RJISampler import RJISampler
 from LeanStoreSampler import LeanStoreSampler
 from BaseSampler import BaseSampler
+from NumpySampler import NumpySampler
 
 from definitions import ROOT_DIR
+import json
 
 @click.command()
 @click.option('--generator', default='fio', help='Benchmark to use. The following are supported: "ycsb", "fio", "apache","rji", "lean"')
@@ -51,7 +53,7 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , storage :
         case "ycsb":
             sampler = YCSBSampler(n, samples, skew)
         case "apache":
-            sampler = ApacheCommonRunner(n, samples, skew)
+            sampler = ApacheSampler(n, samples, skew)
         case "fio":
             sampler = FIOSampler(n, samples, skew)
         case "rji":
@@ -60,6 +62,8 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , storage :
             sampler = LeanStoreSampler(n, samples, skew)
         case "base": 
             sampler = BaseSampler(n, samples, skew)
+        case "numpy":   
+            sampler = NumpySampler(n, samples, skew)
         case _:
             click.echo(f"Unsupported generator {generator}. Supported generators are: 'ycsb', 'fio', 'apache', 'rji', 'lean'")
 
@@ -87,43 +91,43 @@ def run_all_benchmarks(skew, n):
 
 
 @click.command()
-@click.option('--generator', default='fio', help='Benchmark to use. The following are supported: "ycsb", "fio", "apache","rji", "lean"')
 @click.option('--skew', default=1.0,  help='Skew factor of the Zipfian Distribution')
 @click.option('--n', default=1, help='Range of items to sample from in the Zipfian in multiples of million (1.000.000)')
 @click.option('--samples', default=1, help='Number of samples that should be taken from the distribution in multiples of million (1.000.000)')
-def perf_benchmark(generator, skew, n, samples):
-    """Program to run specified 'generator' option with the given Zipfian 'skew' factor using the item range in 'n'. This program outputs a CSV file with 
-    the following filename format: 'results_generator_date.csv' and following column structure 'bucket_num, cnt, rel_freq'."""
+def perf_benchmark(skew, n, samples):
+    """Program to run specified 'generator' option with the given Zipfian 'skew' factor using the item range in 'n'."""
 
     n *= 1_000_000
     samples *= 1_000_000
 
-    match generator:
-        case "ycsb":
-            sampler = YCSBSampler(n, samples, skew)
-        case "apache":
-            sampler = ApacheCommonRunner(n, samples, skew)
-        case "fio":
-            sampler = FIOSampler(n, samples, skew)
-        case "rji":
-            sampler = RJISampler(n, samples, skew)
-        case "lean":
-            sampler = LeanStoreSampler(n, samples, skew)
-        case "base":
-            sampler = BaseSampler(n, samples, skew)
-        case _:
-            click.echo(f"Unsupported generator {generator}. Supported generators are: 'ycsb', 'fio', 'apache', 'rji', 'lean'")
+    benchmark_results = {
+        "metadata": {
+            "skew": skew,
+            "n": n,
+            "samples": samples,
+            "timestamp": datetime.now().isoformat(),
+        },
+        "results": {}
+    }
 
-    t1 = time.perf_counter()
+    for generator in [BaseSampler, NumpySampler, RJISampler, FIOSampler, LeanStoreSampler, YCSBSampler, ApacheSampler]:
+        sampler = generator(n, samples, skew)
+        generator_name = generator.__name__
 
-    for i in range(samples):
-        sampler.sample()
-    
-    t2 = time.perf_counter()
+        t1 = time.perf_counter()
+        for i in range(samples):
+            sampler.sample()
+        t2 = time.perf_counter()
 
-    elapsed_time_ms = (t2 - t1) * 1000
+        elapsed_time_ms = (t2 - t1) * 1000
+        benchmark_results["results"][generator_name] = elapsed_time_ms
 
-    click.echo(f"Time taken to sample {samples} items: {elapsed_time_ms:.3f} ms")
+    # Output JSON to file
+    output_path = ROOT_DIR + f"/results/benchmarks/perf_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.json"
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, 'w') as f:
+        json.dump(benchmark_results, f, indent=2)
+
 
 @click.command()
 @click.argument('filenames', nargs=-1)  # Accept one or more filenames
