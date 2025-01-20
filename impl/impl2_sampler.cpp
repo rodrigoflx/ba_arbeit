@@ -1,7 +1,9 @@
 #include <iostream>
-#include "base_sampler.hpp"
+#include "impl2_sampler.hpp"
 
-long base_sampler::sample() {
+impl2_sampler::impl2_sampler(long range, double skew, long seed) : sampler_i(range, skew, seed) {};
+
+long impl2_sampler::sample() {
     std::cout << "Not implemented yet" << std::endl;
     return 1;
 }

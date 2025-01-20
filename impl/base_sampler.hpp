@@ -2,20 +2,19 @@
 #define BASE_SAMPLER_HPP
 
 #include "sampler_i.hpp"
+#include <random>
 
 /** 
  *  Base class for samplers based on the following code: 
- *  https://github.com/scipy/scipy/blob/v1.15.1/scipy/stats/_discrete_distns.py#L1295
- *  
+ *  https://jasoncrease.medium.com/rejection-sampling-the-zipf-distribution-6b359792cffa
  */
 class base_sampler : public sampler_i {
     public:
-        base_sampler(long range, double skew, long seed) : sampler_i(range, skew, seed) {};
+        base_sampler(long range, double skew, long seed);
         long sample() override;
     private:
-        long range;
-        double skew;
-        long seed;
+        double _t;
+        std::mt19937 gen;
 };
 
 sampler_i* create_concrete_sampler(long range, long seed, double skew) {

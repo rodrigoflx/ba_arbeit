@@ -5,12 +5,8 @@
 
 class impl2_sampler : public sampler_i {
     public:
-        impl2_sampler(long range, double skew, long seed) : sampler_i(range, skew, seed) {};
+        impl2_sampler(long range, double skew, long seed);
         long sample() override;
-    private:
-        long range;
-        double skew;
-        long seed;
 };
 
 sampler_i* create_concrete_sampler(long range, long seed, double skew) {
