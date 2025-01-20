@@ -1,5 +1,4 @@
 from Sampler import Sampler
-from sortedcontainers import SortedDict
 
 import ctypes
 from ctypes import c_void_p, c_long, c_double
@@ -26,7 +25,7 @@ class RJISampler(Sampler):
     """
     def __init__(self, n, samples, skew):
         super().__init__(n, samples, skew)
-        sampler = zipf_lib.zipf_create(self.n, self.skew, 10)
+        self.sampler = zipf_lib.zipf_create(self.n, self.skew, 10)
 
     def sample(self) -> int:
         return zipf_lib.zipf_sample(self.sampler)
