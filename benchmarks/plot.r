@@ -18,7 +18,7 @@ plot_distributions <- function(file_paths) {
         data <- read.csv(file_path)
 
         # Ensure required columns exist
-        if (!all(c("bucket_num", "cnt", "rel_freq") %in% colnames(data))) {
+        if (!all(c("entry", "cnt", "rel_freq") %in% colnames(data))) {
             stop("The input CSV file must contain the columns: bucket_num, cnt, rel_freq.")
         }
 
@@ -27,7 +27,7 @@ plot_distributions <- function(file_paths) {
     }
 
     palette_colors <- brewer.pal(n = 4, name = "Set1")[1]
-    zipfdist <- ggplot(all_data, aes(x = bucket_num, y = rel_freq * 100, color = generator)) +
+    zipfdist <- ggplot(all_data, aes(x = entry, y = rel_freq * 100, color = generator)) +
         geom_line() +
         scale_y_log10() +
         ylab("Accesses [%]") +
