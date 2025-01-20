@@ -6,7 +6,7 @@ from sortedcontainers import SortedDict
 import time
 
 from definitions import StorageType, PostProcessing, EnumChoice
-from DictStorageInterface import GzipJSONStorage, DucksDBStorage, CSVStorage
+from DictStorageInterface import GzipJSONStorage, DuckDBStorage, CSVStorage
 from PostProcessingInterface import RawOutputPostProcessor, BucketingPostProcessor
 
 from YCSBSampler import YCSBSampler
@@ -14,6 +14,7 @@ from ApacheSampler import ApacheCommonRunner
 from FIOSampler import FIOSampler
 from RJISampler import RJISampler
 from LeanStoreSampler import LeanStoreSampler
+from BaseSampler import BaseSampler
 
 from definitions import ROOT_DIR
 
@@ -34,11 +35,11 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , storage :
     
     match storage:
         case StorageType.CSV:
-            storage_type = CSVStorage(ROOT_DIR + f"results/csv/results_{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.csv")
+            storage_type = CSVStorage(ROOT_DIR + f"/results/csv/results_{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.csv")
         case StorageType.GZIP_JSON:
-            storage_type = GzipJSONStorage(ROOT_DIR + f"results/gzip/results_{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.json.gz")
+            storage_type = GzipJSONStorage(ROOT_DIR + f"/results/gzip/results_{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.json.gz")
         case StorageType.DUCKSDB:
-            storage_type = DucksDBStorage(ROOT_DIR + f"results/ducksdb/results_{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.db")
+            storage_type = DuckDBStorage(ROOT_DIR + f"/results/ducksdb/results_{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.db")
 
     match post:
         case PostProcessing.NONE:
@@ -57,6 +58,8 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , storage :
             sampler = RJISampler(n, samples, skew)
         case "lean":
             sampler = LeanStoreSampler(n, samples, skew)
+        case "base": 
+            sampler = BaseSampler(n, samples, skew)
         case _:
             click.echo(f"Unsupported generator {generator}. Supported generators are: 'ycsb', 'fio', 'apache', 'rji', 'lean'")
 
@@ -66,8 +69,9 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , storage :
         item = sampler.sample()
         data[item] = data.get(item, 0) + 1
 
-    processed_data = post_processing.process(data)
-    storage_type.store(processed_data)
+    processed_data = post_processing.process(data, n)
+    storage_type.store(processed_data, n)
+    storage_type.finalize()
 
     del sampler
 
@@ -105,6 +109,8 @@ def perf_benchmark(generator, skew, n, samples):
             sampler = RJISampler(n, samples, skew)
         case "lean":
             sampler = LeanStoreSampler(n, samples, skew)
+        case "base":
+            sampler = BaseSampler(n, samples, skew)
         case _:
             click.echo(f"Unsupported generator {generator}. Supported generators are: 'ycsb', 'fio', 'apache', 'rji', 'lean'")
 
