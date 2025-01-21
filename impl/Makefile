@@ -4,28 +4,26 @@ CXXFLAGS = -fPIC -std=c++20 -Wall -Wextra
 LDFLAGS = -shared
 
 # Define sources
-BASE = base_sampler.cpp
-IMPL2 = impl2_sampler.cpp
-WRAPPER = sampler_wrapper.cpp
+SOURCES = sampler_wrapper.cpp
 
-# Define target libraries
-TARGETS = libsampler.so
+# Define target library
+TARGET = libsampler.so
 
 # Default to implementation 1
 IMPL ?= 1
 ifeq ($(IMPL), 1)
-    IMPLEMENTATION = $(BASE)
+    CXXFLAGS += -DUSE_BASE_SAMPLER
 else ifeq ($(IMPL), 2)
-    IMPLEMENTATION = $(IMPL2)
+    CXXFLAGS += -DUSE_IMPL2_SAMPLER
 else
     $(error Invalid value for IMPL. Must be 1 or 2.)
 endif
 
-all: $(TARGETS)
+all: $(TARGET)
 
 # Build the shared library
-libsampler.so: $(IMPLEMENTATION) $(WRAPPER)
+$(TARGET): $(SOURCES)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
 
 clean:
-	rm -f $(TARGETS)
+	rm -f $(TARGET)

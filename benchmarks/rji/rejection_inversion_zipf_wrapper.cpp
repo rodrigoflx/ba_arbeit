@@ -1,5 +1,7 @@
 #include "rejection_inversion_zipf_wrapper.hpp"
 #include <random>
+#include <chrono>
+
 
 // Wrapper struct to hold sampler and RNG
 struct ZipfWrapper {
@@ -24,4 +26,15 @@ void zipf_destroy(void* wrapper) {
 long zipf_sample(void* wrapper) {
     auto* zipf = static_cast<ZipfWrapper*>(wrapper);
     return zipf->sampler.sample(zipf->rng);
+}
+
+long zipf_benchmark(void* wrapper, long samples) {
+    auto* zipf = static_cast<ZipfWrapper*>(wrapper);
+    
+    auto t1 = std::chrono::high_resolution_clock::now();
+    for (long i = 0; i < samples; i++) {
+        zipf->sampler.sample(zipf->rng);
+    }
+    auto t2 = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 }

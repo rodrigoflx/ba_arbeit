@@ -1,16 +1,22 @@
 #ifndef IMPL2_SAMPLER_HPP
-#define IMPLE2_SAMPLER_HPP
+#define IMPL2_SAMPLER_HPP
 
-#include "sampler_i.hpp"
+#include <iostream>
 
-class impl2_sampler : public sampler_i {
-    public:
-        impl2_sampler(long range, double skew, long seed);
-        long sample() override;
+class impl2_sampler {
+public:
+    impl2_sampler(long range, double skew, long seed)
+        : range(range), skew(skew), seed(seed) {}
+
+    long sample() {
+        std::cout << "Not implemented yet" << std::endl;
+        return 1;
+    }
+
+private:
+    long range;
+    double skew;
+    long seed;
 };
-
-sampler_i* create_concrete_sampler(long range, long seed, double skew) {
-    return new impl2_sampler(range, skew, seed);
-}
 
 #endif

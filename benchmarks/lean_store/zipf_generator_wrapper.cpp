@@ -1,5 +1,11 @@
 #include "zipf_generator_wrapper.hpp"
 #include "ZipfGenerator.hpp"
+#include <chrono>
+
+using std::chrono::high_resolution_clock;
+using std::chrono::duration_cast;
+using std::chrono::duration;
+using std::chrono::milliseconds;
 
 struct ZipfWrapper {
     leanstore::utils::ZipfGenerator generator;
@@ -19,4 +25,15 @@ void zipf_destroy(void* wrapper) {
 long zipf_sample(void* wrapper) {
     auto* zipf = static_cast<ZipfWrapper*>(wrapper);
     return zipf->generator.rand();
+};
+
+long zipf_benchmark(void* wrapper, long samples) {
+    auto* zipf = static_cast<ZipfWrapper*>(wrapper);
+    
+    auto t1 = high_resolution_clock::now();
+    for (long i = 0; i < samples; i++) {
+        zipf->generator.rand();
+    }
+    auto t2 = high_resolution_clock::now();
+    return duration_cast<milliseconds>(t2 - t1).count();
 };

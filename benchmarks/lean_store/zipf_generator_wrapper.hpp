@@ -8,7 +8,9 @@ extern "C" {
 
     void zipf_destroy(void* sampler);
 
-    long zipf_sample(void* sampler); 
+    long zipf_sample(void* sampler);
+
+    long zipf_benchmark(void* sampler, long samples); 
 }
 
 #endif // ZIPF_GENERATOR_WRAPPER_H
