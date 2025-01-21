@@ -1,17 +1,33 @@
 from Sampler import Sampler
-from sortedcontainers import SortedDict
-
 import ctypes
+from sortedcontainers import SortedDict
 
 from definitions import ROOT_DIR
 
 # Load the shared library
-sampler = ctypes.CDLL(ROOT_DIR + '/shared/libsampler.so')
+lib = ctypes.CDLL(ROOT_DIR + '/shared/libsampler.so')
 
-sampler.create_sampler.restype = ctypes.c_void_p
-sampler.create_sampler.argtypes = [ctypes.c_long, ctypes.c_double, ctypes.c_long]
-sampler.sample.restype = ctypes.c_long
-sampler.destroy_sampler.argtypes = [ctypes.c_void_p]
+SamplerHandle = ctypes.POINTER(ctypes.c_char)
+
+lib.create_sampler.argtypes = [ctypes.c_long, ctypes.c_double, ctypes.c_long]
+lib.sample.argtypes = [SamplerHandle]
+lib.destroy_sampler.argtypes = [SamplerHandle]
+
+lib.create_sampler.restype = SamplerHandle
+lib.sample.restype = ctypes.c_long
+
+class LibWrapper:
+    def __init__(self, n, skew):
+        self.sampler = lib.create_sampler(n, skew, 10)
+
+    def sample(self) -> int:
+        return lib.sample(self.sampler)
+
+    def destroy(self) -> None:
+        lib.destroy_sampler(self.sampler)
+
+    def benchmark(self, samples) -> int:
+        return lib.benchmark(self.sampler, samples)
 
 class BaseSampler(Sampler):
     """
@@ -19,10 +35,10 @@ class BaseSampler(Sampler):
     """
     def __init__(self, n, samples, skew):
         super().__init__(n, samples, skew)
-        self.sampler = sampler.create_sampler(self.n, self.skew, 10)
+        self.sampler = LibWrapper(n, skew)
+    
+    def sample(self):
+        return self.sampler.sample()
 
-    def sample(self) -> int:
-        return sampler.sample(self.sampler)
-
-    def __del__(self):
-        sampler.destroy_sampler(self.sampler)
+    def benchmark(self):
+        return self.sampler.benchmark(self.samples)
