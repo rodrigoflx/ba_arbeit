@@ -4,6 +4,7 @@ import ctypes
 from ctypes import c_void_p, c_long, c_double
 
 from definitions import ROOT_DIR
+from sortedcontainers import SortedDict
 
 # Load the shared library
 zipf_lib = ctypes.CDLL(ROOT_DIR + '/shared/rji_sampler.so')
@@ -29,6 +30,9 @@ class RJISampler(Sampler):
 
     def sample(self) -> int:
         return zipf_lib.zipf_sample(self.sampler)
+
+    def benchmark(self) -> int:
+        return zipf_lib.zipf_benchmark(self.sampler, self.samples)
 
     def __del__(self):
         zipf_lib.zipf_destroy(self.sampler)

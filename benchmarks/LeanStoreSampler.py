@@ -31,6 +31,9 @@ class LeanStoreSampler(Sampler):
 
     def sample(self) -> int:
         return zipf_lib.zipf_sample(self.sampler)
+
+    def benchmark(self) -> int:
+        return zipf_lib.zipf_benchmark(self.sampler, self.samples)
     
     def __del__(self):
         zipf_lib.zipf_destroy(self.sampler)

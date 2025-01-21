@@ -39,6 +39,10 @@ lib.pareto_next.restype = c_uint64
 lib.zipf_disable_hash.argtypes = [POINTER(ZipfState)]
 lib.zipf_disable_hash.restype = None
 
+# Bind zipf_benchmark
+lib.zipf_benchmark.argtypes = [POINTER(ZipfState), c_uint64]
+lib.zipf_benchmark.restype = c_uint64
+
 
 class FIOSampler(Sampler):
     """
@@ -51,3 +55,6 @@ class FIOSampler(Sampler):
     
     def sample(self) -> int:
         return lib.zipf_next(self.zs)
+    
+    def benchmark(self) -> int:
+        return lib.zipf_benchmark(self.zs, self.samples)
