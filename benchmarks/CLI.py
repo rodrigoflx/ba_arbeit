@@ -4,10 +4,13 @@ import subprocess
 import click
 from sortedcontainers import SortedDict
 import time
+from definitions import ROOT_DIR
 
 from definitions import StorageType, PostProcessing, EnumChoice
 from DictStorageInterface import GzipJSONStorage, DuckDBStorage, CSVStorage
 from PostProcessingInterface import RawOutputPostProcessor, BucketingPostProcessor
+
+import jpype
 
 from YCSBSampler import YCSBSampler
 from ApacheSampler import ApacheSampler
@@ -17,8 +20,24 @@ from LeanStoreSampler import LeanStoreSampler
 from BaseSampler import BaseSampler
 from NumpySampler import NumpySampler
 
-from definitions import ROOT_DIR
 import json
+
+import numpy as np
+from scipy.stats import chisquare, entropy, ks_2samp, zipfian
+import math
+
+
+def start_jvm():
+    jpype.startJVM(
+        "-Xms1g",   
+        "-Xmx4g",    
+        jvmpath="/usr/lib/jvm/default-java/lib/server/libjvm.so", 
+        classpath=[
+            ROOT_DIR + "/jar/ApacheCommonRunner.jar", 
+            ROOT_DIR + "/jar/YCSB-Runner.jar"
+        ],
+        convertStrings=True,
+    )
 
 @click.command()
 @click.option('--generator', default='fio', help='Benchmark to use. The following are supported: "ycsb", "fio", "apache","rji", "lean"')
@@ -34,6 +53,7 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , storage :
     n *= 1_000_000
     samples *= 1_000_000
 
+    start_jvm()
     
     match storage:
         case StorageType.CSV:
@@ -77,6 +97,8 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , storage :
     storage_type.store(processed_data, n)
     storage_type.finalize()
 
+    jpype.shutdownJVM()
+
     del sampler
 
 
@@ -100,6 +122,8 @@ def perf_benchmark(skew, n, samples):
     n *= 1_000_000
     samples *= 1_000_000
 
+    start_jvm()
+
     benchmark_results = {
         "metadata": {
             "skew": skew,
@@ -110,17 +134,93 @@ def perf_benchmark(skew, n, samples):
         "results": {}
     }
 
-    for generator in [BaseSampler, NumpySampler, RJISampler, FIOSampler, LeanStoreSampler, YCSBSampler, ApacheSampler]:
+    for generator in [BaseSampler, NumpySampler, RJISampler, FIOSampler, LeanStoreSampler, ApacheSampler, YCSBSampler]:
         sampler = generator(n, samples, skew)
         generator_name = generator.__name__
 
-        t1 = time.perf_counter()
-        for i in range(samples):
-            sampler.sample()
-        t2 = time.perf_counter()
+        benchmark_results["results"][generator_name] = sampler.benchmark()
 
-        elapsed_time_ms = (t2 - t1) * 1000
-        benchmark_results["results"][generator_name] = elapsed_time_ms
+    jpype.shutdownJVM()
+
+    # Output JSON to file
+    output_path = ROOT_DIR + f"/results/benchmarks/perf_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.json"
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, 'w') as f:
+        json.dump(benchmark_results, f, indent=2)
+
+
+@click.command()
+@click.option('--skew', default=1,  help='Skew factor of the Zipfian Distribution')
+@click.option('--n', default=100, help='Range of items to sample from in the Zipfian in multiples of million (1.000.000)')
+def run_all_benchmarks(skew, n):
+    """Program to run all supported generators  with the given Zipfian 'skew' factor using the item range in 'n'. This program outputs a series of  CSV file with 
+    the following filename format: 'results_generator_date.csv' and following column structure 'bucket_num, cnt, rel_freq'."""
+    
+    click.echo("This program is not implemented")        
+
+
+@click.command()
+@click.option('--skew', default=1.0,  help='Skew factor of the Zipfian Distribution')
+@click.option('--n', default=1, help='Range of items to sample from in the Zipfian in multiples of million (1.000.000)')
+@click.option('--samples', default=1, help='Number of samples that should be taken from the distribution in multiples of million (1.000.000)')
+def acc_benchmark(skew, n, samples):
+    """Program to run specified 'generator' option with the given Zipfian 'skew' factor using the item range in 'n'."""
+
+    n *= 1_000_000
+    samples *= 1_000_000
+
+    start_jvm()
+
+    benchmark_results = {
+        "metadata": {
+            "skew": skew,
+            "n": n,
+            "samples": samples,
+            "timestamp": datetime.now().isoformat(),
+        },
+        "results": {}
+    }
+
+    for generator in [BaseSampler, NumpySampler, RJISampler, FIOSampler, LeanStoreSampler, ApacheSampler, YCSBSampler]:
+        sampler = generator(n, samples, skew)
+        generator_name = generator.__name__
+
+        benchmark_results["results"][generator_name] = {}
+        theoretical_probs = zipfian.pmf(np.arange(1, n + 1), a=skew, n=n)
+
+        results = SortedDict()
+
+        for _ in range(samples):
+            item = sampler.sample()
+            if (type(item) is not int):
+                continue
+            results[item] = results.get(item, 0) + 1
+
+        empirical_counts = np.zeros(n)
+
+        for k, v in results.items():
+            if 1 <= k <= n:  # Ensure items are within range
+                empirical_counts[k - 1] = v
+
+        empirical_counts = empirical_counts / empirical_counts.sum() * samples
+        empirical_probs = empirical_counts / samples
+
+        # Chi-Square Goodness-of-Fit
+        expected_counts =  theoretical_probs * samples
+        chi2, _ = chisquare(f_obs=empirical_counts, f_exp=expected_counts)
+
+        # Kullback-Leibler Divergence
+        kl = entropy(empirical_probs + 1e-12, theoretical_probs + 1e-12)  # Add epsilon to avoid log(0)
+
+        # Kolmogorov-Smirnov Test
+        ks, _ = ks_2samp(empirical_probs, theoretical_probs)
+
+
+        benchmark_results["results"][generator_name]["chi_square"] = float(chi2)
+        benchmark_results["results"][generator_name]["kl_divergence"] = kl
+        benchmark_results["results"][generator_name]["ks_test"] = float(ks)
+
+    jpype.shutdownJVM()
 
     # Output JSON to file
     output_path = ROOT_DIR + f"/results/benchmarks/perf_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.json"
