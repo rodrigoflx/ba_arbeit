@@ -4,14 +4,18 @@ import time
 
 class NumpySampler(Sampler):
     """
-    Wrapper for the Numpy sampler from Gabriel
+    Class is currently not working, don't use
     """
     def __init__(self, n, samples, skew):
         super().__init__(n, samples, skew)
-        self.sampler = np.random.zipf(self.skew, self.samples)
+        self.result_arr = np.random.zipf(self.skew, self.samples)
+        self.generator = (item for item in self.result_arr)
 
     def sample(self) -> int:
-        return self.sampler
+        try:
+            return next(self.generator)
+        except StopIteration:
+            return None
 
     def benchmark(self) -> int:
         start = time.perf_counter()

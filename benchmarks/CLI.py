@@ -23,7 +23,7 @@ from NumpySampler import NumpySampler
 import json
 
 import numpy as np
-from scipy.stats import chisquare, entropy, ks_2samp, zipfian
+from scipy.stats import entropy, ks_2samp, zipfian
 import math
 
 
@@ -166,8 +166,8 @@ def run_all_benchmarks(skew, n):
 def acc_benchmark(skew, n, samples):
     """Program to run specified 'generator' option with the given Zipfian 'skew' factor using the item range in 'n'."""
 
-    n *= 1_000_000
-    samples *= 1_000_000
+    n *= 1000000
+    samples *= 1000000
 
     start_jvm()
 
@@ -180,43 +180,29 @@ def acc_benchmark(skew, n, samples):
         },
         "results": {}
     }
+    
+    theoretical_probs = zipfian.pmf(np.arange(1, n + 1), a=skew, n=n)
 
-    for generator in [BaseSampler, NumpySampler, RJISampler, FIOSampler, LeanStoreSampler, ApacheSampler, YCSBSampler]:
+    for generator in [ApacheSampler, YCSBSampler, BaseSampler, FIOSampler, LeanStoreSampler, RJISampler]:
         sampler = generator(n, samples, skew)
         generator_name = generator.__name__
 
         benchmark_results["results"][generator_name] = {}
-        theoretical_probs = zipfian.pmf(np.arange(1, n + 1), a=skew, n=n)
 
-        results = SortedDict()
-
+        # Sample from generator and store it in a balanced binary tree
+        empirical_counts = np.zeros(n)
         for _ in range(samples):
             item = sampler.sample()
-            if (type(item) is not int):
-                continue
-            results[item] = results.get(item, 0) + 1
+            empirical_counts[item - 1] += 1
 
-        empirical_counts = np.zeros(n)
-
-        for k, v in results.items():
-            if 1 <= k <= n:  # Ensure items are within range
-                empirical_counts[k - 1] = v
-
-        empirical_counts = empirical_counts / empirical_counts.sum() * samples
         empirical_probs = empirical_counts / samples
 
-        # Chi-Square Goodness-of-Fit
-        expected_counts =  theoretical_probs * samples
-        chi2, _ = chisquare(f_obs=empirical_counts, f_exp=expected_counts)
-
-        # Kullback-Leibler Divergence
+        #Kullback-Leibler Divergence
         kl = entropy(empirical_probs + 1e-12, theoretical_probs + 1e-12)  # Add epsilon to avoid log(0)
 
         # Kolmogorov-Smirnov Test
         ks, _ = ks_2samp(empirical_probs, theoretical_probs)
 
-
-        benchmark_results["results"][generator_name]["chi_square"] = float(chi2)
         benchmark_results["results"][generator_name]["kl_divergence"] = kl
         benchmark_results["results"][generator_name]["ks_test"] = float(ks)
 
