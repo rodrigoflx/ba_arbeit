@@ -12,3 +12,5 @@ benchmarks/graphs/
 benchmarks/results/
 
 impl/libsampler.so
+benchmarks/zipf_rust/target/
+benchmarks/zipf_rust/Cargo.lock
