@@ -1,9 +1,14 @@
 import jpype
 import jpype.imports
+from jpype.types import *
+
 from sortedcontainers import SortedDict
 
 from Sampler import Sampler
-import time
+from matplotlib import pyplot as plt
+import pandas as pd
+
+from definitions import ROOT_DIR
 
 class YCSBSampler(Sampler):
     """
@@ -25,3 +30,29 @@ class YCSBSampler(Sampler):
     
     def benchmark(self):
         return self.zipf.benchmark(self.samples)
+
+
+if __name__ == "__main__":
+    dict = SortedDict()
+    jpype.startJVM(
+        jvmpath="/usr/lib/jvm/default-java/lib/server/libjvm.so",
+        classpath=[ROOT_DIR + "/jar/YCSB-Runner.jar"]) 
+    sampler = YCSBSampler(1000, 10000, 1.1)
+    for _ in range(10000):
+        sample = sampler.sample()
+        if sample in dict:
+            dict[sample] += 1
+        else:
+            dict[sample] = 1 
+
+
+    samples = pd.DataFrame(dict.items(), columns=['Value', 'Frequency'])
+
+    # Plot histogram of values based on frequency
+    plt.bar(samples["Value"], samples["Frequency"], log=True)
+    plt.title("Zipfian Distribution")
+    plt.xlabel("Value")
+    plt.ylabel("Frequency (log scale)")
+    plt.show()
+
+    jpype.shutdownJVM()
