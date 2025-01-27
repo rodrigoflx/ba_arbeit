@@ -1,47 +1,36 @@
 from sortedcontainers import SortedDict
 from Sampler import Sampler
 
-import ctypes
-from ctypes import c_void_p, c_long, c_double
+from zipf_rust import PyZipf
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from definitions import ROOT_DIR
 
-# Load the shared library
-zipf_lib = ctypes.CDLL(ROOT_DIR + '/shared/sysbench_wrapper.so')
-
-# Define function signatures
-zipf_lib.zipf_create.argtypes = [c_long, c_double]
-zipf_lib.zipf_create.restype = c_void_p
-
-zipf_lib.zipf_sample.argtypes = []
-zipf_lib.zipf_sample.restype = c_long
-
-zipf_lib.zipf_benchmark.argtypes = [c_long]
-zipf_lib.zipf_benchmark.restype = c_long
-
-
-class SysbenchSampler(Sampler):
+class RustSampler(Sampler):
     """
-    Wrapper for the RJI sampler from Gabriel
+    Wrapper for the rust crate 'zipf'  
     """
     def __init__(self, n, samples, skew):
         super().__init__(n, samples, skew)
-        zipf_lib.zipf_create(self.n, self.skew)
+        self.sampler = PyZipf(n, skew)
 
     def sample(self) -> int:
-        return zipf_lib.zipf_sample()
+        return self.sampler.sample()
 
     def benchmark(self) -> int:
-        return zipf_lib.zipf_benchmark(self.samples)
+        return self.sampler.benchmark(self.samples)
 
 
 if __name__ == "__main__":
+    n = 1000
+    samples = 10 * n
+    a = 1.1
+
     dict = SortedDict()
-    sampler = SysbenchSampler(1000, 10000, 1.1)
-    for _ in range(10000):
+    sampler = PyZipf(n, a)
+    
+    for _ in range(samples):
         sample = sampler.sample()
         if sample in dict:
             dict[sample] += 1
