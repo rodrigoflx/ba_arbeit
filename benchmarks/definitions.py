@@ -3,6 +3,7 @@ from enum import Enum
 import click
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+BATCH_SIZE = 10000
 
 class StorageType(Enum):
     GZIP_JSON = "gzip"
