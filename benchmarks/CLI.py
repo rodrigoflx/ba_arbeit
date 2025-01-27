@@ -3,8 +3,7 @@ import os
 import subprocess
 import click
 from sortedcontainers import SortedDict
-import time
-from definitions import ROOT_DIR
+from definitions import ROOT_DIR, BATCH_SIZE
 
 from definitions import StorageType, PostProcessing, EnumChoice
 from DictStorageInterface import GzipJSONStorage, DuckDBStorage, CSVStorage
@@ -19,12 +18,14 @@ from RJISampler import RJISampler
 from LeanStoreSampler import LeanStoreSampler
 from BaseSampler import BaseSampler
 from NumpySampler import NumpySampler
+from RustSampler import RustSampler
+from SysbenchSampler import SysbenchSampler
+from PgBenchSampler import PgBenchSampler
 
 import json
 
 import numpy as np
 from scipy.stats import entropy, ks_2samp, zipfian
-import math
 
 
 def start_jvm():
@@ -40,7 +41,7 @@ def start_jvm():
     )
 
 @click.command()
-@click.option('--generator', default='fio', help='Benchmark to use. The following are supported: "ycsb", "fio", "apache","rji", "lean"')
+@click.option('--generator', default='fio', help='Benchmark to use. The following are supported: "ycsb", "fio", "apache","rji", "lean", "base", "pg_bench", "sysbench", "rust"')
 @click.option('--skew', default=1.0,  help='Skew factor of the Zipfian Distribution')
 @click.option('--n', default=1, help='Range of items to sample from in the Zipfian in multiples of million (1.000.000)')
 @click.option('--samples', default=1, help='Number of samples that should be taken from the distribution in multiples of million (1.000.000)')
@@ -61,7 +62,7 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , storage :
         case StorageType.GZIP_JSON:
             storage_type = GzipJSONStorage(ROOT_DIR + f"/results/gzip/results_{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.json.gz")
         case StorageType.DUCKSDB:
-            storage_type = DuckDBStorage(ROOT_DIR + f"/results/ducksdb/results_{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.db")
+            storage_type = DuckDBStorage(ROOT_DIR + f"/results/ducksdb/results_{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.db", samples)
 
     match post:
         case PostProcessing.NONE:
@@ -82,24 +83,33 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , storage :
             sampler = LeanStoreSampler(n, samples, skew)
         case "base": 
             sampler = BaseSampler(n, samples, skew)
-        case "numpy":   
-            sampler = NumpySampler(n, samples, skew)
+        case "pg_bench":
+            sampler = PgBenchSampler(n, samples, skew)
+        case "sysbench":
+            sampler = SysbenchSampler(n, samples, skew)
+        case "rust":   
+            sampler = RustSampler(n, samples, skew)
         case _:
-            click.echo(f"Unsupported generator {generator}. Supported generators are: 'ycsb', 'fio', 'apache', 'rji', 'lean'")
+            click.echo(f"Unsupported generator {generator}. Supported generators are: 'ycsb', 'fio', 'apache', 'rji', 'lean', 'base', 'pg_bench', 'sysbench', 'rust'")
 
     data = SortedDict()
 
-    for i in range(samples):
-        item = sampler.sample()
-        data[item] = data.get(item, 0) + 1
 
-    processed_data = post_processing.process(data, n)
-    storage_type.store(processed_data, n)
+    for start in range(0, samples, BATCH_SIZE):
+        end = min(start + BATCH_SIZE, samples)
+        for _ in range(end - start):
+            item = sampler.sample()
+            data[item] = data.get(item, 0) + 1
+
+        batch_result = post_processing.process(data, n)
+        storage_type.store(batch_result)
+        data.clear()
+
     storage_type.finalize()
 
-    jpype.shutdownJVM()
-
     del sampler
+
+    jpype.shutdownJVM()
 
 
 @click.command()
@@ -109,7 +119,7 @@ def run_all_benchmarks(skew, n):
     """Program to run all supported generators  with the given Zipfian 'skew' factor using the item range in 'n'. This program outputs a series of  CSV file with 
     the following filename format: 'results_generator_date.csv' and following column structure 'bucket_num, cnt, rel_freq'."""
     
-    click.echo("This program is not implemented")        
+    click.echo("This program is not implemented")   
 
 
 @click.command()
@@ -134,7 +144,7 @@ def perf_benchmark(skew, n, samples):
         "results": {}
     }
 
-    for generator in [BaseSampler, NumpySampler, RJISampler, FIOSampler, LeanStoreSampler, ApacheSampler, YCSBSampler]:
+    for generator in [BaseSampler, RustSampler, PgBenchSampler, SysbenchSampler, RJISampler, FIOSampler, LeanStoreSampler, ApacheSampler, YCSBSampler]:
         sampler = generator(n, samples, skew)
         generator_name = generator.__name__
 
@@ -183,7 +193,7 @@ def acc_benchmark(skew, n, samples):
     
     theoretical_probs = zipfian.pmf(np.arange(1, n + 1), a=skew, n=n)
 
-    for generator in [ApacheSampler, YCSBSampler, BaseSampler, FIOSampler, LeanStoreSampler, RJISampler]:
+    for generator in [BaseSampler, RustSampler, PgBenchSampler, SysbenchSampler, RJISampler, FIOSampler, LeanStoreSampler, ApacheSampler, YCSBSampler]:
         sampler = generator(n, samples, skew)
         generator_name = generator.__name__
 
@@ -206,7 +216,6 @@ def acc_benchmark(skew, n, samples):
         benchmark_results["results"][generator_name]["kl_divergence"] = kl
         benchmark_results["results"][generator_name]["ks_test"] = float(ks)
 
-    jpype.shutdownJVM()
 
     # Output JSON to file
     output_path = ROOT_DIR + f"/results/benchmarks/perf_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.json"
@@ -214,6 +223,7 @@ def acc_benchmark(skew, n, samples):
     with open(output_path, 'w') as f:
         json.dump(benchmark_results, f, indent=2)
 
+    jpype.shutdownJVM()
 
 @click.command()
 @click.argument('filenames', nargs=-1)  # Accept one or more filenames
