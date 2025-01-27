@@ -4,6 +4,7 @@
 #include "stdint.h"
 #include "xoroshiro128plus.h"
 #include "stdlib.h"
+#include <math.h>
 
 typedef uint64_t sb_rng_state_t [2];
 

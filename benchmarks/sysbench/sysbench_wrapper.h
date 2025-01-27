@@ -6,6 +6,7 @@
 long n;
 
 void zipf_create(long numberOfElements, double exponent);
-long zipf_sample(); 
+long zipf_sample();
+long zipf_benchmark(long samples); 
 
 #endif // SYSBENCH_WRAPPER_H

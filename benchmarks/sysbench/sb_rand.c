@@ -1,6 +1,4 @@
 #include "sb_rand.h"
-#include <math.h>
-#include <stdint.h>
 
 sb_rng_state_t sb_rng_state;
 
@@ -16,15 +14,18 @@ static double helper2(double x);
 
 void sb_rand_init(void)
 {
-  zipf_s = 2 - hIntegralInverse(hIntegral(2.5, zipf_exp) - h(2, zipf_exp),
-                                zipf_exp);
-  zipf_hIntegralX1 = hIntegral(1.5, zipf_exp) - 1;
-
   // Seed PRNG 
   sb_rng_state[0] = (((uint64_t) random()) << 32) |
     (((uint64_t) random()) & UINT32_MAX);
   sb_rng_state[1] = (((uint64_t) random()) << 32) |
     (((uint64_t) random()) & UINT32_MAX);
+
+  
+
+  zipf_s = 2 - hIntegralInverse(hIntegral(2.5, zipf_exp) - h(2, zipf_exp),
+                                zipf_exp);
+  zipf_hIntegralX1 = hIntegral(1.5, zipf_exp) - 1;
+
 
 }
 
