@@ -3,16 +3,21 @@ from enum import Enum
 import click
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-BATCH_SIZE = 10000
+BATCH_SIZE = 100000000
 
-class StorageType(Enum):
-    GZIP_JSON = "gzip"
-    DUCKSDB = "duckdb"
+class OutputType(Enum):
+    PARQUET = "parquet"
     CSV = "csv"
 
 class PostProcessing(Enum):
     NONE = "none" 
     BUCKETIZE = "bucketize"
+
+class StorageType(Enum):
+    POLARS = "polars"
+    DUCKDB = "duckdb"
+    COUNTER = "counter"
+    SQLITE = "sqlite"
 
 class EnumChoice(click.Choice):
     def __init__(self, enum_cls):

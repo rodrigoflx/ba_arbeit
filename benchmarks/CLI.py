@@ -2,12 +2,11 @@ from datetime import datetime
 import os
 import subprocess
 import click
-from sortedcontainers import SortedDict
+from collections import Counter
 from definitions import ROOT_DIR, BATCH_SIZE
 
-from definitions import StorageType, PostProcessing, EnumChoice
-from DictStorageInterface import GzipJSONStorage, DuckDBStorage, CSVStorage
-from PostProcessingInterface import RawOutputPostProcessor, BucketingPostProcessor
+from definitions import OutputType, StorageType, EnumChoice
+from StorageInterface import DuckDBInterface, PolarsInterface, CounterInterface, SQLITEInterface
 
 import jpype
 
@@ -17,16 +16,11 @@ from FIOSampler import FIOSampler
 from RJISampler import RJISampler
 from LeanStoreSampler import LeanStoreSampler
 from BaseSampler import BaseSampler
-from NumpySampler import NumpySampler
 from RustSampler import RustSampler
 from SysbenchSampler import SysbenchSampler
 from PgBenchSampler import PgBenchSampler
 
-import json
-
-import numpy as np
 from scipy.stats import entropy, ks_2samp, zipfian
-
 
 def start_jvm():
     jpype.startJVM(
@@ -45,35 +39,35 @@ def start_jvm():
 @click.option('--skew', default=1.0,  help='Skew factor of the Zipfian Distribution')
 @click.option('--n', default=1, help='Range of items to sample from in the Zipfian in multiples of million (1.000.000)')
 @click.option('--samples', default=1, help='Number of samples that should be taken from the distribution in multiples of million (1.000.000)')
-@click.option('--storage', type=EnumChoice(StorageType), default=StorageType.CSV.value, help='Defines the type of storage to use: "csv", "gzip", "duckdb"')
-@click.option('--post', type=EnumChoice(PostProcessing), default=PostProcessing.NONE.value, help='Define the type of post processing to use: "none", "bucketize"')
-def sample_zipf(generator : str, skew : float, n : int, samples: int , storage : StorageType, post : PostProcessing):
+@click.option('--output', type=EnumChoice(OutputType), default=OutputType.CSV.value, help='Defines the type of storage to use: "csv", "parquet"')
+@click.option('--storage', type=EnumChoice(StorageType), default=StorageType.COUNTER.value, help='Defines the type of storage to use: "duckdb", "polars", "counter", "sqlite"')
+@click.option('--buckets', default=100, help='Number of buckets to use to accumulate data')
+def sample_zipf(generator : str, skew : float, n : int, samples: int , output : OutputType, storage: StorageType, buckets:int):
     """Program to run specified 'generator' option with the given Zipfian 'skew' factor using the item range in 'n'. This program outputs a CSV file with 
     the following filename format: 'results_generator_date.csv' and following column structure 'bucket_num, cnt, rel_freq'."""
 
     n *= 1_000_000
     samples *= 1_000_000
 
-    start_jvm()
     
     match storage:
-        case StorageType.CSV:
-            storage_type = CSVStorage(ROOT_DIR + f"/results/csv/results_{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.csv")
-        case StorageType.GZIP_JSON:
-            storage_type = GzipJSONStorage(ROOT_DIR + f"/results/gzip/results_{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.json.gz")
-        case StorageType.DUCKSDB:
-            storage_type = DuckDBStorage(ROOT_DIR + f"/results/ducksdb/results_{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.db", samples)
-
-    match post:
-        case PostProcessing.NONE:
-            post_processing = RawOutputPostProcessor()
-        case PostProcessing.BUCKETIZE:
-            post_processing = BucketingPostProcessor(100)
+        case StorageType.DUCKDB:
+            ds = DuckDBInterface(samples)
+        case StorageType.POLARS:
+            ds = PolarsInterface(samples)
+        case StorageType.COUNTER:   
+            ds = CounterInterface(samples)
+        case StorageType.SQLITE:
+            ds = SQLITEInterface(samples)
+        case _:
+            click.echo(f"Unsupported storage type {storage}. Supported storage types are: 'duckdb', 'polars', 'counter', 'sqlite'")
     
     match generator:
         case "ycsb":
+            start_jvm()
             sampler = YCSBSampler(n, samples, skew)
         case "apache":
+            start_jvm()
             sampler = ApacheSampler(n, samples, skew)
         case "fio":
             sampler = FIOSampler(n, samples, skew)
@@ -91,25 +85,37 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , storage :
             sampler = RustSampler(n, samples, skew)
         case _:
             click.echo(f"Unsupported generator {generator}. Supported generators are: 'ycsb', 'fio', 'apache', 'rji', 'lean', 'base', 'pg_bench', 'sysbench', 'rust'")
+            
+    match output:
+        case OutputType.CSV:
+            filepath = ROOT_DIR + f"/results/csv/{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.csv"
+        case OutputType.PARQUET:
+            filepath = ROOT_DIR + f"/results/parquet/{generator}_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.parquet"
+    
+    counter = Counter()
 
-    data = SortedDict()
-
-
-    for start in range(0, samples, BATCH_SIZE):
-        end = min(start + BATCH_SIZE, samples)
-        for _ in range(end - start):
+    if buckets == samples:
+        for start in range(0, samples, BATCH_SIZE): 
+            end = min(start + BATCH_SIZE, samples)
+            for i in range(start, end):
+                item = sampler.sample()
+                counter[item] += 1
+            
+            ds.batch_insert(counter)
+            counter.clear() 
+    else:
+        for _ in range(samples):
             item = sampler.sample()
-            data[item] = data.get(item, 0) + 1
+            index = (item * buckets) // n
+            counter[index] += 1
+            ds.batch_insert(counter) 
 
-        batch_result = post_processing.process(data, n)
-        storage_type.store(batch_result)
-        data.clear()
+    ds.store(filepath, output)
 
-    storage_type.finalize()
-
-    del sampler
-
-    jpype.shutdownJVM()
+    match generator:
+        case "ycsb", "apache":
+            jpype.shutdownJVM()
+        
 
 
 @click.command()
@@ -226,8 +232,11 @@ def acc_benchmark(skew, n, samples):
     jpype.shutdownJVM()
 
 @click.command()
-@click.argument('filenames', nargs=-1)  # Accept one or more filenames
-def graph_result(filenames):
+@click.option('--skew', type=float, required=True)
+@click.option('--samples', type=int, required=True)
+@click.option('--n', type=int, required=True)
+@click.argument("filenames", nargs=-1) 
+def graph_result(skew : float, samples : int, n : int, filenames : tuple[str]):
     """
     Utility to plot graphs using an R script and output the results to files with the format:
     vis_generator_date.png. Expects one or more CSV files named FILENAMES.
@@ -241,7 +250,13 @@ def graph_result(filenames):
     try:
         # Call the R script with all provided filenames
         result = subprocess.run(
-            ['Rscript', r_script_path] + list(filenames),
+            [
+                'Rscript', 
+                r_script_path, 
+                "--skew", str(skew),
+                "--samples", str(samples),
+                "--n", str(n)
+            ] + list(filenames),
             capture_output=True,
             text=True,
             check=True,
@@ -275,3 +290,7 @@ def graph_results_pairwise(base, to_be_compared):
         print(result.stdout)
     except subprocess.CalledProcessError as e:
         print(f"Error running the R script for generating the graph: {e.stderr}")
+
+
+if __name__ == "__main__":
+    sample_zipf(['--generator', 'rji', '--skew', 0.8, '--n', 1, '--samples', 1, '--storage', 'csv', '--storage', 'duckdb', '--post', 'none'])
