@@ -30,6 +30,9 @@ plot_distributions <- function(file_paths, skew, samples, n) {
     all_data <- rbind(all_data, data)
   }
 
+  # Filter out the last bucket (entry == 1000)
+  all_data <- all_data[all_data$entry != 1000, ]
+  
   zipfdist <- ggplot(all_data, 
                      aes(x = .data$entry, 
                          y = .data$rel_freq * 100, 
