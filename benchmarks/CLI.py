@@ -9,6 +9,7 @@ from definitions import OutputType, StorageType, EnumChoice
 from StorageInterface import DuckDBInterface, PolarsInterface, CounterInterface, SQLITEInterface
 
 import jpype
+import json
 
 from YCSBSampler import YCSBSampler
 from ApacheSampler import ApacheSampler
@@ -21,6 +22,7 @@ from SysbenchSampler import SysbenchSampler
 from PgBenchSampler import PgBenchSampler
 
 from scipy.stats import entropy, ks_2samp, zipfian
+import numpy as np
 
 def start_jvm():
     jpype.startJVM(
@@ -214,13 +216,18 @@ def acc_benchmark(skew, n, samples):
         empirical_probs = empirical_counts / samples
 
         #Kullback-Leibler Divergence
-        kl = entropy(empirical_probs + 1e-12, theoretical_probs + 1e-12)  # Add epsilon to avoid log(0)
+        kl = entropy(empirical_probs + 1e-12, theoretical_probs + 1e-12) 
+
+        # Total Variation Distance
+        tvd = 0.5 * np.sum(np.abs(empirical_probs - theoretical_probs))
 
         # Kolmogorov-Smirnov Test
         ks, _ = ks_2samp(empirical_probs, theoretical_probs)
 
         benchmark_results["results"][generator_name]["kl_divergence"] = kl
+        benchmark_results["results"][generator_name]["tvd"] = tvd
         benchmark_results["results"][generator_name]["ks_test"] = float(ks)
+        del sampler
 
 
     # Output JSON to file
