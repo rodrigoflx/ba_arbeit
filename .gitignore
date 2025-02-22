@@ -14,3 +14,5 @@ benchmarks/results/
 impl/libsampler.so
 benchmarks/zipf_rust/target/
 benchmarks/zipf_rust/Cargo.lock
+benchmarks/Rplots.pdf
+benchmarks/normalized_rust_3.pdf

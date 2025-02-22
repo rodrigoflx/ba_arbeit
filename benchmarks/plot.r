@@ -32,10 +32,10 @@ plot_distributions <- function(file_paths, skew, samples, n) {
 
   # Filter out the last bucket (entry == 1000)
   all_data <- all_data[all_data$entry != 1000, ]
-  
-  zipfdist <- ggplot(all_data, 
-                     aes(x = .data$entry, 
-                         y = .data$rel_freq * 100, 
+
+  zipfdist <- ggplot(all_data,
+                     aes(x = .data$entry,
+                         y = .data$rel_freq * 100,
                          color = generator)) +
     geom_line() +
     scale_y_log10() +

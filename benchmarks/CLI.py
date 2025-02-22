@@ -47,10 +47,6 @@ def start_jvm():
 def sample_zipf(generator : str, skew : float, n : int, samples: int , output : OutputType, storage: StorageType, buckets:int):
     """Program to run specified 'generator' option with the given Zipfian 'skew' factor using the item range in 'n'. This program outputs a CSV file with 
     the following filename format: 'results_generator_date.csv' and following column structure 'bucket_num, cnt, rel_freq'."""
-
-    n *= 1_000_000
-    samples *= 1_000_000
-
     
     match storage:
         case StorageType.DUCKDB:
@@ -158,13 +154,14 @@ def perf_benchmark(skew, n, samples):
 
         benchmark_results["results"][generator_name] = sampler.benchmark()
 
-    jpype.shutdownJVM()
 
     # Output JSON to file
     output_path = ROOT_DIR + f"/results/benchmarks/perf_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.json"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, 'w') as f:
         json.dump(benchmark_results, f, indent=2)
+
+    jpype.shutdownJVM()
 
 
 @click.command()
@@ -184,8 +181,8 @@ def run_all_benchmarks(skew, n):
 def acc_benchmark(skew, n, samples):
     """Program to run specified 'generator' option with the given Zipfian 'skew' factor using the item range in 'n'."""
 
-    n *= 1000000
-    samples *= 1000000
+    # n *= 1000000
+    # samples *= 1000000
 
     start_jvm()
 
@@ -198,7 +195,7 @@ def acc_benchmark(skew, n, samples):
         },
         "results": {}
     }
-    
+
     theoretical_probs = zipfian.pmf(np.arange(1, n + 1), a=skew, n=n)
 
     for generator in [BaseSampler, RustSampler, PgBenchSampler, SysbenchSampler, RJISampler, FIOSampler, LeanStoreSampler, ApacheSampler, YCSBSampler]:
@@ -208,10 +205,12 @@ def acc_benchmark(skew, n, samples):
         benchmark_results["results"][generator_name] = {}
 
         # Sample from generator and store it in a balanced binary tree
-        empirical_counts = np.zeros(n)
+        empirical_counts = Counter()
         for _ in range(samples):
             item = sampler.sample()
             empirical_counts[item - 1] += 1
+
+        empirical_counts = np.array([empirical_counts[i] for i in range(n)]) 
 
         empirical_probs = empirical_counts / samples
 
@@ -227,8 +226,6 @@ def acc_benchmark(skew, n, samples):
         benchmark_results["results"][generator_name]["kl_divergence"] = kl
         benchmark_results["results"][generator_name]["tvd"] = tvd
         benchmark_results["results"][generator_name]["ks_test"] = float(ks)
-        del sampler
-
 
     # Output JSON to file
     output_path = ROOT_DIR + f"/results/benchmarks/perf_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.json"
