@@ -16,3 +16,4 @@ benchmarks/zipf_rust/target/
 benchmarks/zipf_rust/Cargo.lock
 benchmarks/Rplots.pdf
 benchmarks/normalized_rust_3.pdf
+benchmarks/TVD_vs_n.png

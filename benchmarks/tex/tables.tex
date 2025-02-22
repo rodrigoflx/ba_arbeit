@@ -1,0 +1,98 @@
+%-------------------------------------------------------
+% LaTeX table for n = 10M (Part 1)
+\begin{table}[h!]
+  \centering
+  \caption{Benchmark results for n = 10M (Part 1)}
+  \begin{tabular}{l c c c c c}
+    \toprule
+    Samples (M) & BaseSampler & RustSampler & PgBenchSampler & SysbenchSampler & RJISampler \\
+    \midrule
+    1M & 152 & 24 & 45 & 59 & 30 \\
+    10M & 1535 & 242 & 469 & 593 & 297 \\
+    100M & 15053 & 2395 & 4575 & 5881 & 2927 \\
+    1000M & 150529 & 24071 & 45957 & 59252 & 29506 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% LaTeX table for n = 10M (Part 2)
+\begin{table}[h!]
+  \centering
+  \caption{Benchmark results for n = 10M (Part 2)}
+  \begin{tabular}{l c c c c c}
+    \toprule
+    Samples (M) & FIOSampler & LeanStoreSampler & ApacheSampler & YCSBSampler \\
+    \midrule
+    1M & 38706 & 28 & 48 & 44 \\
+    10M & 389617 & 293 & 385 & 416 \\
+    100M & 3976742 & 2877 & 3763 & 3554 \\
+    1000M & 39568051 & 29446 & 38274 & 36962 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+%-------------------------------------------------------
+% LaTeX table for n = 100M (Part 1)
+\begin{table}[h!]
+  \centering
+  \caption{Benchmark results for n = 100M (Part 1)}
+  \begin{tabular}{l c c c c c}
+    \toprule
+    Samples (M) & BaseSampler & RustSampler & PgBenchSampler & SysbenchSampler & RJISampler \\
+    \midrule
+    1M & 151 & 24 & 45 & 58 & 29 \\
+    10M & 1506 & 239 & 457 & 589 & 292 \\
+    100M & 15136 & 2432 & 4597 & 5904 & 2952 \\
+    1000M & 151716 & 24086 & 45953 & 58911 & 29748 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% LaTeX table for n = 100M (Part 2)
+\begin{table}[h!]
+  \centering
+  \caption{Benchmark results for n = 100M (Part 2)}
+  \begin{tabular}{l c c c c c}
+    \toprule
+    Samples (M) & FIOSampler & LeanStoreSampler & ApacheSampler & YCSBSampler \\
+    \midrule
+    1M & 38777 & 28 & 60 & 41 \\
+    10M & 386682 & 290 & 384 & 365 \\
+    100M & 3902948 & 2937 & 3808 & 3567 \\
+    1000M & 38856879 & 29558 & 37857 & 37099 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+%-------------------------------------------------------
+% LaTeX table for n = 500M (Part 1)
+\begin{table}[h!]
+  \centering
+  \caption{Benchmark results for n = 500M (Part 1)}
+  \begin{tabular}{l c c c c c}
+    \toprule
+    Samples (M) & BaseSampler & RustSampler & PgBenchSampler & SysbenchSampler & RJISampler \\
+    \midrule
+    1M & 153 & 24 & 45 & 58 & 29 \\
+    10M & 1500 & 240 & 458 & 587 & 294 \\
+    100M & 15225 & 2506 & 4826 & 6076 & 2976 \\
+    1000M & 151561 & 24114 & 46046 & 58940 & 29448 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% LaTeX table for n = 500M (Part 2)
+\begin{table}[h!]
+  \centering
+  \caption{Benchmark results for n = 500M (Part 2)}
+  \begin{tabular}{l c c c c c}
+    \toprule
+    Samples (M) & FIOSampler & LeanStoreSampler & ApacheSampler & YCSBSampler \\
+    \midrule
+    1M & 39926 & 28 & 50 & 40 \\
+    10M & 397136 & 289 & 384 & 368 \\
+    100M & 3906773 & 2940 & 5023 & 3487 \\
+    1000M & 38756090 & 29015 & 49198 & 37041 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
