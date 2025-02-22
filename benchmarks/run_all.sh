@@ -14,7 +14,7 @@ for generator in "${generators[@]}"; do
     echo "Running with generator: $generator"
     
     # Run the command and capture the exit code
-    sample_zipf --generator "$generator" --skew 0.8 --n 500 --samples 2500 --buckets 1000
+    sample_zipf --generator "$generator" --skew 0.8 --n $1 --samples $2 --buckets $3
     
     # Check the exit code
     exit_code=$?
