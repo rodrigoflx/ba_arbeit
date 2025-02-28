@@ -46,7 +46,7 @@ data <- data %>%
 data <- data %>%
   mutate(ratio = rel_freq / theoretical_frequency)
 
-ggplot(data, aes(x = entry, y = ratio)) +
+ggplot(data, aes(x = entry, y = log(ratio))) +
   geom_hline(yintercept = 1, color = '#0066ff83') +
   geom_point(color = '#ff880083') +
   labs(title = "Ratio of Empirical to Theoretical Generalized Zipf Frequencies",

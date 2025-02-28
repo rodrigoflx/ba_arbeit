@@ -7,18 +7,35 @@ library(optparse)
 plot_distributions <- function(file_paths, skew, samples, n) {
   all_data <- data.frame()
 
-  for (file_path in file_paths) {
-    file_name <- basename(file_path)
-    pattern <- "^([a-zA-Z]+)_\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}\\.csv$"
-    valid_format <- grepl(pattern, file_name)
+  if (!is.atomic(file_paths)) {
+    for (file_path in file_paths) {
+      file_name <- basename(file_path)
+      pattern <- "^([a-zA-Z]+)_\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}\\.csv$"
+      valid_format <- grepl(pattern, file_name)
 
-    if (!valid_format) {
-      stop(paste("Each input file must match the format:",
-                "result_generator_YYYY-MM-DD-HH-mm.csv"))
+      if (!valid_format) {
+        stop(paste("Each input file must match the format:",
+                  "result_generator_YYYY-MM-DD-HH-mm.csv"))
+      }
+
+      generator <- sub(pattern, "\\1", file_name)
+      data <- read.csv(file_path)
+
+      # Ensure required columns exist
+      required_cols <- c("entry", "cnt", "rel_freq")
+      if (!all(required_cols %in% colnames(data))) {
+        stop("The input CSV file must contain the columns: entry, cnt, rel_freq.")
+      }
+
+      data$generator <- generator
+      all_data <- rbind(all_data, data)
     }
+  } else {
+    file_name <- basename(file_paths)
+    pattern <- "^([a-zA-Z]+)_\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}\\.csv$"
 
     generator <- sub(pattern, "\\1", file_name)
-    data <- read.csv(file_path)
+    data <- read.csv(file_paths)
 
     # Ensure required columns exist
     required_cols <- c("entry", "cnt", "rel_freq")
@@ -93,8 +110,6 @@ skew <- opt$options$skew
 file_paths <- opt$args
 
 file_paths <- as.character(file_paths)
-
-print(file_paths)
 
 # Call the function with the provided arguments
 plot_distributions(file_paths, skew, samples, n)

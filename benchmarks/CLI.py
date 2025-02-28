@@ -4,6 +4,8 @@ import subprocess
 import click
 from collections import Counter
 from definitions import ROOT_DIR, BATCH_SIZE
+import csv
+import io
 
 from definitions import OutputType, StorageType, EnumChoice
 from StorageInterface import DuckDBInterface, PolarsInterface, CounterInterface, SQLITEInterface
@@ -69,6 +71,38 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , output : 
             sampler = ApacheSampler(n, samples, skew)
         case "fio":
             sampler = FIOSampler(n, samples, skew)
+
+            block_size = 4096
+            total_space_gib = (n * block_size) / (1024**3)
+
+            gen_zipf_cmd = [
+                "./shared/fio-genzipf",  
+                "-t", "zipf",
+                "-i", str(skew),
+                "-g", str(total_space_gib),
+                "-b", str(block_size),
+                '-o', str(buckets),
+                "-c"
+            ]
+
+            try:
+                result = subprocess.run(
+                    gen_zipf_cmd, capture_output=True, text=True, check=True
+                )
+
+            except subprocess.CalledProcessError as e:
+                print(f"Error running gen-zipf: {e.stderr}")
+                raise
+
+            reader = csv.reader(io.StringIO(result.stdout))
+            now = datetime.now()
+            timestamp = now.strftime('%Y-%m-%d-%H-%M')
+
+            with open(f"results_fio_{timestamp}.csv", 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                for row in reader:
+                    writer.writerow(row)
+            return
         case "rji":
             sampler = RJISampler(n, samples, skew)
         case "lean":
@@ -92,20 +126,22 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , output : 
     
     counter = Counter()
 
-    if buckets == samples:
+    if buckets != samples:
         for start in range(0, samples, BATCH_SIZE): 
             end = min(start + BATCH_SIZE, samples)
             for i in range(start, end):
                 item = sampler.sample()
-                counter[item] += 1
+                index = item * buckets // n 
+                if (index < buckets):
+                    counter[index] += 1
+                else:
+                    print(f"{item}")
             
             ds.batch_insert(counter)
-            counter.clear() 
     else:
         for _ in range(samples):
             item = sampler.sample()
-            index = (item * buckets) // n
-            counter[index] += 1
+            counter[item] += 1
             ds.batch_insert(counter) 
 
     ds.store(filepath, output)
