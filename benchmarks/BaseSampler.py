@@ -1,6 +1,8 @@
 from Sampler import Sampler
 import ctypes
-from sortedcontainers import SortedDict
+import pandas as pd 
+import matplotlib.pyplot as plt 
+from collections import Counter
 
 from definitions import ROOT_DIR
 
@@ -18,7 +20,7 @@ lib.sample.restype = ctypes.c_long
 
 class LibWrapper:
     def __init__(self, n, skew):
-        self.sampler = lib.create_sampler(n, skew, 10)
+        self.sampler = lib.create_sampler(n, skew, 102)
 
     def sample(self) -> int:
         return lib.sample(self.sampler)
@@ -42,3 +44,28 @@ class BaseSampler(Sampler):
 
     def benchmark(self):
         return self.sampler.benchmark(self.samples)
+
+
+if __name__ == "__main__":
+    n = 1000
+    samples = 10 * n
+    a = 1.1
+
+    dict = Counter()
+    sampler = BaseSampler(n, samples, a)
+    
+    for _ in range(samples):
+        sample = sampler.sample()
+        if sample in dict:
+            dict[sample] += 1
+        else:
+            dict[sample] = 1 
+
+    samples = pd.DataFrame(sorted(dict.items()), columns=['Value', 'Frequency'])
+
+    # Plot histogram of values based on frequency
+    plt.bar(samples["Value"], samples["Frequency"], log=True)
+    plt.title("Zipfian Distribution")
+    plt.xlabel("Value")
+    plt.ylabel("Frequency (log scale)")
+    plt.show()
