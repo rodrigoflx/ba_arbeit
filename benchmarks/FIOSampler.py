@@ -1,9 +1,42 @@
 from Sampler import Sampler
-from sortedcontainers import SortedDict
+from collections import Counter
 from definitions import ROOT_DIR
+import matplotlib.pyplot as plt
+import pandas as pd 
 
 import ctypes
-from ctypes import POINTER, c_uint64, c_double, c_uint, c_bool, Structure
+from ctypes import POINTER, c_uint64, c_double, c_uint, c_bool, Structure, Union
+
+class Taus88_state(Structure):
+    _fields_ = [
+        ('s1', c_uint),
+        ('s2', c_uint),
+        ('s3', c_uint),
+        ('s4', c_uint)
+    ]
+
+class Taus258_state(Structure):
+    _fields_ = [
+        ('s1', c_uint64),
+        ('s2', c_uint64),
+        ('s3', c_uint64),
+        ('s4', c_uint64),
+        ('s5', c_uint64)
+    ]
+
+
+class State(Union):
+    _fields_ = [
+        ("state32", Taus88_state),
+        ("state64", Taus258_state)
+    ]
+
+class FRAND_STATE(Structure):
+    _anonymous_ = ("u")
+    _fields_ = [
+        ("use64", c_uint),
+        ("u", State)
+    ]
 
 class ZipfState(Structure):
     _fields_ = [
@@ -12,7 +45,7 @@ class ZipfState(Structure):
         ("zeta2", c_double),
         ("zetan", c_double),
         ("pareto_pow", c_double),
-        ("rand", ctypes.c_uint8 * 16),
+        ("rand", FRAND_STATE),
         ("rand_off", c_uint64),
         ("disable_hash", c_bool),
     ]
@@ -58,3 +91,28 @@ class FIOSampler(Sampler):
     
     def benchmark(self) -> int:
         return lib.zipf_benchmark(self.zs, self.samples)
+
+if __name__ == "__main__":
+    n = 10000
+    samples = 10 * n
+    a = 1.1
+
+    counter = Counter()
+    fio_sampler = FIOSampler(n, samples, a)
+    
+    for _ in range(samples):
+        fio_sample = fio_sampler.sample()
+        if fio_sample in counter:
+            counter[fio_sample] += 1
+        else:
+            counter[fio_sample] = 1 
+
+    sorted_values = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
+    
+    df = pd.DataFrame([{'rank': rank, 'frequency': freq} for rank, (value, freq) in enumerate(sorted_values)])
+
+    plt.bar(df["rank"], df["frequency"], log=True)
+    plt.title("Zipfian Distribution")
+    plt.xlabel("Value")
+    plt.ylabel("Frequency (log scale)")
+    plt.show()
