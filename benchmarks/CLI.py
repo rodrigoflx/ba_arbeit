@@ -72,37 +72,36 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , output : 
         case "fio":
             sampler = FIOSampler(n, samples, skew)
 
-            block_size = 4096
-            total_space_gib = (n * block_size) / (1024**3)
+            # block_size = 4096
+            # total_space_gib = (n * block_size) / (1024**3)
 
-            gen_zipf_cmd = [
-                "./shared/fio-genzipf",  
-                "-t", "zipf",
-                "-i", str(skew),
-                "-g", str(total_space_gib),
-                "-b", str(block_size),
-                '-o', str(buckets),
-                "-c"
-            ]
+            # gen_zipf_cmd = [
+            #     "./shared/fio-genzipf",  
+            #     "-t", "zipf",
+            #     "-i", str(skew),
+            #     "-g", str(total_space_gib),
+            #     "-b", str(block_size),
+            #     '-o', str(buckets),
+            #     "-c"
+            # ]
 
-            try:
-                result = subprocess.run(
-                    gen_zipf_cmd, capture_output=True, text=True, check=True
-                )
+            # try:
+            #     result = subprocess.run(
+            #         gen_zipf_cmd, capture_output=True, text=True, check=True
+            #     )
 
-            except subprocess.CalledProcessError as e:
-                print(f"Error running gen-zipf: {e.stderr}")
-                raise
+            # except subprocess.CalledProcessError as e:
+            #     print(f"Error running gen-zipf: {e.stderr}")
+            #     raise
 
-            reader = csv.reader(io.StringIO(result.stdout))
-            now = datetime.now()
-            timestamp = now.strftime('%Y-%m-%d-%H-%M')
+            # reader = csv.reader(io.StringIO(result.stdout))
+            # now = datetime.now()
+            # timestamp = now.strftime('%Y-%m-%d-%H-%M')
 
-            with open(f"results_fio_{timestamp}.csv", 'w', newline='') as csvfile:
-                writer = csv.writer(csvfile)
-                for row in reader:
-                    writer.writerow(row)
-            return
+            # with open(f"results_fio_{timestamp}.csv", 'w', newline='') as csvfile:
+            #     writer = csv.writer(csvfile)
+            #     for row in reader:
+            #         writer.writerow(row)
         case "rji":
             sampler = RJISampler(n, samples, skew)
         case "lean":
@@ -144,6 +143,9 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , output : 
             counter[item] += 1
             ds.batch_insert(counter) 
 
+    if generator == "fio":
+        ds.remap_highest_freq_to_smallest_rank()
+
     ds.store(filepath, output)
 
     match generator:
@@ -169,9 +171,6 @@ def run_all_benchmarks(skew, n):
 def perf_benchmark(skew, n, samples):
     """Program to run specified 'generator' option with the given Zipfian 'skew' factor using the item range in 'n'."""
 
-    n *= 1_000_000
-    samples *= 1_000_000
-
     start_jvm()
 
     benchmark_results = {
@@ -184,7 +183,7 @@ def perf_benchmark(skew, n, samples):
         "results": {}
     }
 
-    for generator in [BaseSampler, RustSampler, PgBenchSampler, SysbenchSampler, RJISampler, FIOSampler, LeanStoreSampler, ApacheSampler, YCSBSampler]:
+    for generator in [BaseSampler, SysbenchSampler, FIOSampler, ApacheSampler, YCSBSampler]:
         sampler = generator(n, samples, skew)
         generator_name = generator.__name__
 
@@ -192,7 +191,7 @@ def perf_benchmark(skew, n, samples):
 
 
     # Output JSON to file
-    output_path = ROOT_DIR + f"/results/benchmarks/perf_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.json"
+    output_path = ROOT_DIR + f"/results/benchmarks/perf_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.json"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, 'w') as f:
         json.dump(benchmark_results, f, indent=2)
