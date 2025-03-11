@@ -31,9 +31,11 @@ long zipf_benchmark(void* wrapper, long samples) {
     auto* zipf = static_cast<ZipfWrapper*>(wrapper);
     
     auto t1 = high_resolution_clock::now();
+    long sample;
     for (long i = 0; i < samples; i++) {
-        zipf->generator.rand();
+        sample = zipf->generator.rand();
     }
+    sample++;
     auto t2 = high_resolution_clock::now();
     return duration_cast<milliseconds>(t2 - t1).count();
 };
