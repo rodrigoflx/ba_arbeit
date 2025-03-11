@@ -72,36 +72,38 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , output : 
         case "fio":
             sampler = FIOSampler(n, samples, skew)
 
-            # block_size = 4096
-            # total_space_gib = (n * block_size) / (1024**3)
+            block_size = 4096
+            total_space_gib = (n * block_size) / (1024**3)
 
-            # gen_zipf_cmd = [
-            #     "./shared/fio-genzipf",  
-            #     "-t", "zipf",
-            #     "-i", str(skew),
-            #     "-g", str(total_space_gib),
-            #     "-b", str(block_size),
-            #     '-o', str(buckets),
-            #     "-c"
-            # ]
+            gen_zipf_cmd = [
+                "./shared/fio-genzipf",  
+                "-t", "zipf",
+                "-i", str(skew),
+                "-g", str(total_space_gib),
+                "-b", str(block_size),
+                '-o', str(buckets),
+                "-c"
+            ]
 
-            # try:
-            #     result = subprocess.run(
-            #         gen_zipf_cmd, capture_output=True, text=True, check=True
-            #     )
+            try:
+                result = subprocess.run(
+                    gen_zipf_cmd, capture_output=True, text=True, check=True
+                )
 
-            # except subprocess.CalledProcessError as e:
-            #     print(f"Error running gen-zipf: {e.stderr}")
-            #     raise
+            except subprocess.CalledProcessError as e:
+                print(f"Error running gen-zipf: {e.stderr}")
+                raise
 
-            # reader = csv.reader(io.StringIO(result.stdout))
-            # now = datetime.now()
-            # timestamp = now.strftime('%Y-%m-%d-%H-%M')
+            reader = csv.reader(io.StringIO(result.stdout))
+            now = datetime.now()
+            timestamp = now.strftime('%Y-%m-%d-%H-%M')
 
-            # with open(f"results_fio_{timestamp}.csv", 'w', newline='') as csvfile:
-            #     writer = csv.writer(csvfile)
-            #     for row in reader:
-            #         writer.writerow(row)
+            with open(f"results_fio_{timestamp}.csv", 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                for row in reader:
+                    writer.writerow(row)
+
+            return 
         case "rji":
             sampler = RJISampler(n, samples, skew)
         case "lean":
@@ -152,24 +154,12 @@ def sample_zipf(generator : str, skew : float, n : int, samples: int , output : 
         case "ycsb", "apache":
             jpype.shutdownJVM()
         
-
-
-@click.command()
-@click.option('--skew', default=1,  help='Skew factor of the Zipfian Distribution')
-@click.option('--n', default=100, help='Range of items to sample from in the Zipfian in multiples of million (1.000.000)')
-def run_all_benchmarks(skew, n):
-    """Program to run all supported generators  with the given Zipfian 'skew' factor using the item range in 'n'. This program outputs a series of  CSV file with 
-    the following filename format: 'results_generator_date.csv' and following column structure 'bucket_num, cnt, rel_freq'."""
-    
-    click.echo("This program is not implemented")   
-
-
 @click.command()
 @click.option('--skew', default=1.0,  help='Skew factor of the Zipfian Distribution')
 @click.option('--n', default=1, help='Range of items to sample from in the Zipfian in multiples of million (1.000.000)')
 @click.option('--samples', default=1, help='Number of samples that should be taken from the distribution in multiples of million (1.000.000)')
-def perf_benchmark(skew, n, samples):
-    """Program to run specified 'generator' option with the given Zipfian 'skew' factor using the item range in 'n'."""
+def macrobenchmark(skew, n, samples):
+    """Command to run all available generators with the given Zipfian 'skew' factor using the item range in 'n'."""
 
     start_jvm()
 
@@ -198,22 +188,11 @@ def perf_benchmark(skew, n, samples):
 
     jpype.shutdownJVM()
 
-
-@click.command()
-@click.option('--skew', default=1,  help='Skew factor of the Zipfian Distribution')
-@click.option('--n', default=100, help='Range of items to sample from in the Zipfian in multiples of million (1.000.000)')
-def run_all_benchmarks(skew, n):
-    """Program to run all supported generators  with the given Zipfian 'skew' factor using the item range in 'n'. This program outputs a series of  CSV file with 
-    the following filename format: 'results_generator_date.csv' and following column structure 'bucket_num, cnt, rel_freq'."""
-    
-    click.echo("This program is not implemented")        
-
-
 @click.command()
 @click.option('--skew', default=1.0,  help='Skew factor of the Zipfian Distribution')
 @click.option('--n', default=1, help='Range of items to sample from in the Zipfian in multiples of million (1.000.000)')
 @click.option('--samples', default=1, help='Number of samples that should be taken from the distribution in multiples of million (1.000.000)')
-def acc_benchmark(skew, n, samples):
+def accuracy_measures_zipf(skew, n, samples):
     """Program to run specified 'generator' option with the given Zipfian 'skew' factor using the item range in 'n'."""
 
     # n *= 1000000
@@ -269,67 +248,3 @@ def acc_benchmark(skew, n, samples):
         json.dump(benchmark_results, f, indent=2)
 
     jpype.shutdownJVM()
-
-@click.command()
-@click.option('--skew', type=float, required=True)
-@click.option('--samples', type=int, required=True)
-@click.option('--n', type=int, required=True)
-@click.argument("filenames", nargs=-1) 
-def graph_result(skew : float, samples : int, n : int, filenames : tuple[str]):
-    """
-    Utility to plot graphs using an R script and output the results to files with the format:
-    vis_generator_date.png. Expects one or more CSV files named FILENAMES.
-    """
-    if not filenames:
-        print("Error: Please provide at least one CSV file.")
-        return
-
-    r_script_path = os.path.join(os.path.dirname(__file__), 'plot.r')
-
-    try:
-        # Call the R script with all provided filenames
-        result = subprocess.run(
-            [
-                'Rscript', 
-                r_script_path, 
-                "--skew", str(skew),
-                "--samples", str(samples),
-                "--n", str(n)
-            ] + list(filenames),
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        print(result.stdout)
-    except subprocess.CalledProcessError as e:
-        print(f"Error running the R script for generating the graph: {e.stderr}")
-
-@click.command()
-@click.argument("base", type=click.Path(exists=True))
-@click.argument("to_be_compared", nargs=-1, type=click.Path(exists=True))
-def graph_results_pairwise(base, to_be_compared):
-    """
-    Utility to plot graphs using an R script and output the results to files with the format:
-    vis_generator_date.png. Expects one or more CSV files named FILENAMES.
-    """
-    if not to_be_compared:
-        print("Error: Please provide at least one CSV file.")
-        return
-
-    r_script_path = os.path.join(os.path.dirname(__file__), 'plot_pairwise.r')
-
-    try:
-        # Call the R script with all provided filenames
-        result = subprocess.run(
-            ['Rscript', r_script_path, base] + list(to_be_compared),
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        print(result.stdout)
-    except subprocess.CalledProcessError as e:
-        print(f"Error running the R script for generating the graph: {e.stderr}")
-
-
-if __name__ == "__main__":
-    sample_zipf(['--generator', 'rji', '--skew', 0.8, '--n', 1, '--samples', 1, '--storage', 'csv', '--storage', 'duckdb', '--post', 'none'])
