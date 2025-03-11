@@ -29,6 +29,10 @@ class StorageInterface(ABC):
     def store(self, filepath: Path, output_type: OutputType):
         pass
 
+    @abstractmethod
+    def remap_highest_freq_to_smallest_rank(self):
+        pass
+
 
 class SQLITEInterface(StorageInterface):
     """
@@ -131,6 +135,11 @@ class CounterInterface(StorageInterface):
                 f.write("entry,cnt,rel_freq\n")
                 for entry, cnt in sorted(self.data.items()):
                     f.write(f"{entry},{cnt},{cnt/self.total_samples}\n")
+
+    def remap_highest_freq_to_smallest_rank(self):
+        sorted_values = sorted(self.data.items(), key=lambda x: (-x[1], x[0]))
+        mapping = {orig: new for new, (orig, _) in enumerate(sorted_values)}
+        self.data = Counter({mapping[orig]: count for orig, count in self.data.items()})
                     
 class PolarsInterface(StorageInterface):
     """
