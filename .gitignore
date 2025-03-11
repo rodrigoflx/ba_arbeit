@@ -17,3 +17,9 @@ benchmarks/zipf_rust/Cargo.lock
 benchmarks/Rplots.pdf
 benchmarks/normalized_rust_3.pdf
 benchmarks/TVD_vs_n.png
+benchmarks/fio/benchmark
+benchmarks/fio/fio_zipf
+benchmarks/sysbench/benchmark
+impl/cli
+impl/zipf
+benchmarks/sampler_performance_no_alignment.png
