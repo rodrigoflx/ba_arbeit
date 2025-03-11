@@ -20,9 +20,9 @@ set -e
 
 skew=0.8
 
-n_values=(10 100 500)
+n_values=(5000000 50000000 500000000)
 
-samples_values=(1 10 100 1000)
+samples_values=(1000000 10000000 100000000)
 
 bench_dir="results/benchmarks/perf_bench"
 
@@ -32,14 +32,14 @@ column_format="l$(printf ' c%.0s' $(seq 1 ${#sampler_keys[@]}))"
 
 # ---- Part 1: Run the benchmarks ----
 
-# echo "Running benchmarks..."
-# for n in "${n_values[@]}"; do
-#   for samples in "${samples_values[@]}"; do
-#     echo "Running: perf_benchmark --skew $skew --samples $samples --n $n"
-#     perf_benchmark --skew "$skew" --samples "$samples" --n "$n"
-#     sleep 1
-#   done
-# done
+echo "Running benchmarks..."
+for n in "${n_values[@]}"; do
+  for samples in "${samples_values[@]}"; do
+    echo "Running: perf_benchmark --skew $skew --samples $samples --n $n"
+    perf_benchmark --skew "$skew" --samples "$samples" --n "$n"
+    sleep 1
+  done
+done
 
 echo "Benchmarks completed."
 
