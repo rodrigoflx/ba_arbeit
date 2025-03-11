@@ -18,9 +18,11 @@ long zipf_sample()
 long zipf_benchmark(long samples)
 { 
     clock_t t1 = clock();
+    long sample;
     for (long i = 0; i < samples; i++) {
-        sb_rand_zipfian_int(n, zipf_exp, zipf_s, zipf_hIntegralX1);
+        sample = sb_rand_zipfian_int(n, zipf_exp, zipf_s, zipf_hIntegralX1);
     }
     clock_t t2 = clock();
+    sample++;
     return (t2 - t1) * 1000 / CLOCKS_PER_SEC;
 }
