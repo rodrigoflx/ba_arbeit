@@ -4,9 +4,9 @@
 
 static void BM_ZipfThroughput(benchmark::State& state) {
 
-    struct zipf_state zs;
-    double theta = 0.5;
-    int n = 1000000;
+    static struct zipf_state zs;
+    float theta = 0.5;
+    unsigned int n = 1000000;
 
 
     // Do a one-time initialization.

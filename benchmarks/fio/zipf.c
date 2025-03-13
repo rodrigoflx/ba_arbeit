@@ -71,7 +71,7 @@ uint64_t zipf_next(struct zipf_state *zs)
 	if (!zs->disable_hash)
 		val = __hash_u64(val);
 
-	return (val + zs->rand_off) % zs->nranges;
+	return (val + zs->rand_off) % n;
 }
 
 void pareto_init(struct zipf_state *zs, uint64_t nranges, double h,
