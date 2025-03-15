@@ -24,5 +24,9 @@ double zipf_dist::_generate_harmonic_gt1(double a, long n) {
 }
 
 double zipf_dist::pmf(double k, double a, long n) {
-    return 1.0 / (_generate_harmonic(a,n) * std::pow(k, -a));
+    return 1.0 / (this->H_n * std::pow(k, -a));
+}
+
+void zipf_dist::set_harmonic(double a, long n) {
+    this->H_n = _generate_harmonic(a, n);
 }

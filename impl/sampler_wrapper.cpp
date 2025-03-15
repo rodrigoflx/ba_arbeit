@@ -2,14 +2,12 @@
 
 volatile long dummy;
 
-#ifdef USE_BASE_SAMPLER
-    #include "base_sampler.hpp"
+#ifdef USE_REJ_SAMPLER
+    #include "rejection_sampler.hpp"
 #elif defined(USE_RJI_SAMPLER)
     #include "rji_sampler.hpp"
-#elif defined(USE_ALIAS_SAMPLER)
-    #include "alias_sampler.hpp"
-#elif defined(USE_CONT_SAMPLER)
-    #include "cont_sampler.hpp"
+#elif defined(USE_MARSAGLIA_SAMPLER)
+    #include "marsaglia_sampler.hpp"
 #else
     #error "No sampler implementation selected. Define USE_BASE_SAMPLER or USE_IMPL2_SAMPLER."
 #endif
@@ -41,13 +39,11 @@ private:
 extern "C" {
     // Template instantiations
 #ifdef USE_BASE_SAMPLER
-    using SelectedSampler = sampler_wrapper<base_sampler>;
+    using SelectedSampler = sampler_wrapper<rejection_sampler>;
 #elif defined(USE_RJI_SAMPLER)
     using SelectedSampler = sampler_wrapper<rji_sampler>;
-#elif defined(USE_ALIAS_SAMPLER)
-    using SelectedSampler = sampler_wrapper<alias_sampler>;
-#elif defined(USE_CONT_SAMPLER)
-    using SelectedSampler = sampler_wrapper<cont_sampler>;
+#elif defined(USE_MARSAGLIA_SAMPLER)
+    using SelectedSampler = sampler_wrapper<marsaglia_sampler>;
 #else
     #error "No sampler implementation selected"
 #endif

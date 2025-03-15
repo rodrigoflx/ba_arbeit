@@ -4,7 +4,7 @@
 #include <sstream>
 #include <chrono>
 
-#include "cont_sampler.hpp"
+#include "marsaglia_sampler.hpp"
 
 bool parseArguments(int argc, char* argv[],
                     double &s, int &N, int &numSamples) {
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::random_device rd;
-    cont_sampler sampler(N,s, rd());
+    marsaglia_sampler sampler(N,s, rd());
 
 
     long sample;

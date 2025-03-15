@@ -7,9 +7,9 @@
  * Base implementation of the sampler using rejection sampling, due to Jason Crease (https://jasoncrease.medium.com/rejection-sampling-the-zipf-distribution-6b359792cffa)
  * with optimizations inspired on https://docs.rs/rand_distr/latest/src/rand_distr/zipf.rs.html
  */
-class base_sampler {
+class rejection_sampler {
 public:
-    base_sampler(long range, double skew, long seed)
+    rejection_sampler(long range, double skew, long seed)
         : range(range), skew(skew), seed(seed), gen(seed),
           one_minus_skew(1.0 - skew),
           inv_one_minus_skew(1.0 / (1.0 - skew)),
