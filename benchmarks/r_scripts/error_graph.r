@@ -5,6 +5,8 @@ library(dplyr)
 library(latex2exp)
 library(stringr)
 library(scales)
+library(glue)
+library(readr)
 
 dzipf <- function(rank, total_counts, exponent = 1) {
   zipf_denominator <- sum(1 / (1:total_counts)^exponent)
@@ -19,6 +21,21 @@ option_list <- list(
     type = "numeric",
     help = "Skew of Dist",
     metavar = "float"
+  ),
+  make_option(
+    c("--generator", "-g"),
+    type = "character",
+    help = "Generator (such as YCSB, Rejection, etc.)"
+  ),
+  make_option(
+    c("--output", "-o"),
+    type = "character",
+    help = "Output file path",
+  ),
+  make_option(
+    c("--n", "-n"),
+    type = "integer",
+    help = "Support size of the distribution"
   )
 )
 
@@ -26,46 +43,26 @@ opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser, positional_arguments = TRUE)
 
 file_path <- opt$args
-
 file_paths <- as.character(file_path)
+
 exponent <- opt$options$skew
+sampler <- opt$options$generator
+n <- opt$options$n
+output <- opt$options$output
 
-df <- data.frame(
-  sampler = character(),
-  samples = integer(),
-  n = integer(),
-  tvd = numeric(),
-  stringsAsFactors = FALSE
-)
+df <- read_csv(file_path)
 
-for (file in file_paths) {
-  sampled_zipf <- read.csv(file)
-
-  samples <- tail(sampled_zipf$entry, n=1)
-  n <- sum(sampled_zipf$cnt)
-  sampler = str_extract(file, "(?<=/)([^_/]+)(?=(?:_[^/]*)?$)")
-
-
-  theoretical_zipf <- dzipf(n, samples, as.numeric(exponent))
-
-  tvd <- sum(abs(theoretical_zipf - sampled_zipf$rel_freq)) / 2
-  new_row <- data.frame(
-    samples=samples,
-    sampler=sampler,
-    n = n,
-    tvd = tvd
-  )
-  df <- rbind(df, new_row)
-}
-
-# Plot TVD against n for each sampler
-p <- ggplot(df, aes(x = n, y = tvd, color = sampler, group = sampler)) +
+p <- ggplot(df, aes(x = samples, y = tvd)) +
   geom_line() +
   geom_point() +
+  scale_x_log10(
+    breaks = scales::trans_breaks("log10", function(x) 10^x),
+    labels = scales::trans_format("log10", scales::math_format(10^.x))
+  ) +
+  ylim(0.0,0.6) +
   labs(
-    title = "Total Variation Distance vs. Domain Size",
-    x = TeX("n"),
-    y = TeX("TVD")
+    x = TeX("Samples taken"),
+    y = TeX("Total Variation Distance")
   ) +
   theme(
     axis.title.x = element_text(margin = margin(t = 10), size = 12),
@@ -77,4 +74,4 @@ p <- ggplot(df, aes(x = n, y = tvd, color = sampler, group = sampler)) +
   )
 
 # Optionally, save the plot to a file
-ggsave("TVD_vs_n.png", plot = p, width = 8, height = 6)
+ggsave(output, plot = p, width = 8, height = 6)

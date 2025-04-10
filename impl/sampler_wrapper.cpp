@@ -38,7 +38,7 @@ private:
 // Extern C API
 extern "C" {
     // Template instantiations
-#ifdef USE_BASE_SAMPLER
+#ifdef USE_REJ_SAMPLER
     using SelectedSampler = sampler_wrapper<rejection_sampler>;
 #elif defined(USE_RJI_SAMPLER)
     using SelectedSampler = sampler_wrapper<rji_sampler>;

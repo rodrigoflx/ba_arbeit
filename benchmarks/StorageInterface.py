@@ -2,7 +2,7 @@ import duckdb
 from abc import ABC, abstractmethod
 from pathlib import Path
 import polars as pl
-from sortedcontainers import SortedDict
+import os 
 import sqlite3
 from collections import Counter
 
@@ -131,6 +131,7 @@ class CounterInterface(StorageInterface):
         if output == OutputType.PARQUET:
             raise NotImplementedError("Parquet output not supported for SortedDict")
         if output == OutputType.CSV:
+            os.makedirs(filepath.parent, exist_ok=True)
             with open(filepath, 'x') as f:
                 f.write("entry,cnt,rel_freq\n")
                 for entry, cnt in sorted(self.data.items()):

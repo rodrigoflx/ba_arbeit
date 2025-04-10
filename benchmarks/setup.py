@@ -17,7 +17,7 @@ setup(
         'console_scripts': [
             'sample_zipf = CLI:sample_zipf',
             'macrobenchmark = CLI:macrobenchmark',
-            'accuracy_measures_zipf = CLI:accuracy_measures_zipf',
+            'accuracy_zipf = CLI:accuracy_zipf',
         ],
     },
 )

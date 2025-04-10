@@ -5,6 +5,7 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <iostream>
 
 #include "zipf_dist.hpp"
 
@@ -65,8 +66,16 @@ private:
         int64_t accum = 0;
         int maxIndex = 0;
         int maxVal = 0;
+
+        int lastpInt = 0;
+        int equals = 0;
         for (int i = 0; i < range; i++) {
             int pInt = static_cast<int>(pmf[i] * TOTAL / sum + 0.5);
+            if (pInt == lastpInt) {
+                equals++;
+            } 
+            lastpInt = pInt;
+
             prob[i] = pInt;
             accum += pInt;
             if (pInt > maxVal) {

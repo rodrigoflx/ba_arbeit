@@ -7,7 +7,7 @@ from collections import Counter
 from definitions import ROOT_DIR
 
 # Load the shared library
-lib = ctypes.CDLL(ROOT_DIR + '/shared/libsampler.so')
+lib = ctypes.CDLL(ROOT_DIR + '/shared/marsaglia_sampler.so')
 
 SamplerHandle = ctypes.POINTER(ctypes.c_char)
 
@@ -31,7 +31,7 @@ class LibWrapper:
     def benchmark(self, samples) -> int:
         return lib.benchmark(self.sampler, samples)
 
-class BaseSampler(Sampler):
+class MarsagliaSampler(Sampler):
     """
     Wrapper for my base sampler
     """
@@ -45,14 +45,13 @@ class BaseSampler(Sampler):
     def benchmark(self):
         return self.sampler.benchmark(self.samples)
 
-
 if __name__ == "__main__":
-    n = 1000
+    n = 100000000
     samples = 10 * n
-    a = 1.1
+    a = 0.8
 
     dict = Counter()
-    sampler = BaseSampler(n, samples, a)
+    sampler = MarsagliaSampler(n, samples, a)
     
     for _ in range(samples):
         sample = sampler.sample()
